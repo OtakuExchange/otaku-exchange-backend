@@ -23,3 +23,14 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }
+
+// ==========================
+// Custom runDev task for development
+// ==========================
+tasks.register<JavaExec>("runDev") {
+    group = "application"
+    description = "Run Ktor in development mode with auto-reload"
+    mainClass.set("com.ApplicationKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("io.ktor.development", "true")
+}
