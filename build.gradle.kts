@@ -22,6 +22,37 @@ dependencies {
     implementation(libs.ktor.server.config.yaml)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
+
+    implementation(libs.postgresql)
+    implementation(libs.dotenv.kotlin)
+    implementation(libs.hikari)
+
+    // Exposed ORM
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.h2)
+}
+
+// ==========================
+// Custom runDev task for development
+// ==========================
+tasks.register<JavaExec>("runDev") {
+    group = "application"
+    description = "Run Ktor in development mode with auto-reload"
+    mainClass.set("com.ApplicationKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("io.ktor.development", "true")
+}
+
+// ==========================
+// Custom runDev task for development
+// ==========================
+tasks.register<JavaExec>("runDev") {
+    group = "application"
+    description = "Run Ktor in development mode with auto-reload"
+    mainClass.set("com.ApplicationKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    systemProperty("io.ktor.development", "true")
 }
 
 // ==========================

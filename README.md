@@ -30,7 +30,7 @@ To build or run the project, use one of the following tasks:
 | `./gradlew publishImageToLocalRegistry`    | Publish the docker image locally                                     |
 | `./gradlew run`                            | Run the server                                                       |
 | `./gradlew runDocker`                      | Run using the local docker image                                     |
-| `./gradlew runDev`                         | Autobuild on source file change                                      |
+| `./gradlew runDev`                         | Auto reload on source file change, use with autobuild                |
 
 If the server starts successfully, you'll see the following output:
 
