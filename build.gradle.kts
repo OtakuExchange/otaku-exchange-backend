@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 group = "com"
@@ -23,6 +24,9 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
     implementation(libs.postgresql)
     implementation(libs.dotenv.kotlin)
     implementation(libs.hikari)
@@ -39,29 +43,7 @@ dependencies {
 tasks.register<JavaExec>("runDev") {
     group = "application"
     description = "Run Ktor in development mode with auto-reload"
-    mainClass.set("com.ApplicationKt")
-    classpath = sourceSets["main"].runtimeClasspath
-    systemProperty("io.ktor.development", "true")
-}
-
-// ==========================
-// Custom runDev task for development
-// ==========================
-tasks.register<JavaExec>("runDev") {
-    group = "application"
-    description = "Run Ktor in development mode with auto-reload"
-    mainClass.set("com.ApplicationKt")
-    classpath = sourceSets["main"].runtimeClasspath
-    systemProperty("io.ktor.development", "true")
-}
-
-// ==========================
-// Custom runDev task for development
-// ==========================
-tasks.register<JavaExec>("runDev") {
-    group = "application"
-    description = "Run Ktor in development mode with auto-reload"
-    mainClass.set("com.ApplicationKt")
+    mainClass.set("com.otakuexchange.ApplicationKt")
     classpath = sourceSets["main"].runtimeClasspath
     systemProperty("io.ktor.development", "true")
 }
