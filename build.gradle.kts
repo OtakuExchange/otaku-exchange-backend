@@ -31,9 +31,16 @@ dependencies {
     implementation(libs.dotenv.kotlin)
     implementation(libs.hikari)
 
+    // Dependency injection
+    implementation(libs.koin.ktor)
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.logger.slf4j)
+    implementation(libs.koin.core)
+
     // Exposed ORM
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.datetime)
     implementation(libs.h2)
 }
 
