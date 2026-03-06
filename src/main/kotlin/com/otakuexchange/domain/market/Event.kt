@@ -2,11 +2,12 @@ package com.otakuexchange.domain.event
 
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
+import kotlin.uuid.Uuid
 
 @Serializable
 data class Event(
-    val eventId: Int,
-    val topicId: Int,
+    val id: Uuid = Uuid.random(),
+    val topicId: Uuid,
     val format: String,
     val name: String,
     val description: String,

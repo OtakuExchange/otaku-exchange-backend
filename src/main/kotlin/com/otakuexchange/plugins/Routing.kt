@@ -1,4 +1,4 @@
-package com.otakuexchange
+package com.otakuexchange.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
@@ -17,7 +17,8 @@ fun Application.configureRouting() {
     val controllers = listOf(
         get<IRouteController>(named("topicController")),
         get<IRouteController>(named("marketController")),
-        get<IRouteController>(named("eventController"))
+        get<IRouteController>(named("eventController")),
+        get<IRouteController>(named("authController"))
     )
 
     routing {
