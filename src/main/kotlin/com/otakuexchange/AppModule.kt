@@ -14,6 +14,8 @@ import com.otakuexchange.application.controllers.TopicController
 import com.otakuexchange.application.controllers.MarketController
 import com.otakuexchange.application.controllers.EventController
 import com.otakuexchange.application.controllers.AuthController
+import com.otakuexchange.domain.repositories.IOrderBookRepository
+import com.otakuexchange.infra.repositories.RedisOrderBookRepository
 import org.koin.core.qualifier.named
 
 
@@ -27,6 +29,8 @@ val appModule = module {
     single<IEventRepository> { NeonEventRepository() }
     single<IMarketRepository> { NeonMarketRepository() }
     single<IUserRepository> { NeonUserRepository() }
+    single<IOrderBookRepository> { RedisOrderBookRepository() }
+
     single<IRouteController>(named("topicController")) { TopicController(get()) }
     single<IRouteController>(named("marketController")) { MarketController(get()) }
     single<IRouteController>(named("eventController")) { EventController(get()) }

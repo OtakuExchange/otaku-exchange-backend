@@ -10,8 +10,10 @@ hikari = "7.0.2"
 dotenv = "6.4.1"
 # Dependency injection
 koin-bom = "4.1.0"
+jedis = "5.1.0"
 
 [libraries]
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
 ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

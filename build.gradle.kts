@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.koin.ktor)
     implementation(libs.koin.logger.slf4j)
     implementation(libs.koin.core)
+
+    implementation(libs.jedis)
 }
 
 tasks.register<JavaExec>("runDev") {
