@@ -23,5 +23,7 @@ fun Application.module() {
     }
 
     configureExceptionHandling()
+    configureAuth()
+    install(ClerkUserSync)
     configureRouting()
 }

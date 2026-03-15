@@ -10,8 +10,8 @@ object UserTable : Table("users") {
     val passwordHash = text("password_hash").nullable()
     val authProvider = text("auth_provider")
     val providerUserId = text("provider_user_id").nullable().index()
-    val balance = double("balance").default(0.0)
-    val lockedBalance = double("locked_balance").default(0.0)
+    val balance = long("balance").default(0L)
+    val lockedBalance = long("locked_balance").default(0L)
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)
