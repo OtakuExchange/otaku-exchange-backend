@@ -35,6 +35,10 @@ class EventController(private val eventRepository: IEventRepository) : IRouteCon
             else call.respond(event)
         }
 
+    }
+
+    override fun registerProtectedRoutes(route: Route) {
+
         route.post("/events") {
             val event = call.receive<Event>()
             val saved = eventRepository.save(event)

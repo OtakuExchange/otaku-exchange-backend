@@ -4,4 +4,5 @@ import io.ktor.server.routing.Route
 
 interface IRouteController {
     fun registerRoutes(route: Route)
+    fun registerProtectedRoutes(route: Route) {}
 }

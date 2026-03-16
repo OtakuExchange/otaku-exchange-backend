@@ -25,20 +25,20 @@ fun Application.configureRouting() {
             call.respondText("ok")
         }
 
-        // Sync user on every request where a valid Clerk JWT is present
+        // Public GETs — sync user if JWT is present, no auth required
         authenticate("clerk", optional = true) {
             syncClerkUser()
-
-            // Public routes
             authController.registerRoutes(this)
             topicController.registerRoutes(this)
             marketController.registerRoutes(this)
             eventController.registerRoutes(this)
+        }
 
-            // Protected routes — auth enforced
-            authenticate("clerk") {
-
-            }
+        // Protected writes — valid Clerk JWT required
+        authenticate("clerk") {
+            topicController.registerProtectedRoutes(this)
+            marketController.registerProtectedRoutes(this)
+            eventController.registerProtectedRoutes(this)
         }
     }
 }

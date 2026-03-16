@@ -29,6 +29,10 @@ class TopicController(private val topicRepository: ITopicRepository) : IRouteCon
             else call.respond(topic)
         }
 
+    }
+
+    override fun registerProtectedRoutes(route: Route) {
+
         route.post("/topics") {
             val topic = call.receive<Topic>()
             val saved = topicRepository.save(topic)

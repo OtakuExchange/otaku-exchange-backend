@@ -35,6 +35,10 @@ class MarketController(private val marketRepository: IMarketRepository) : IRoute
             else call.respond(market)
         }
 
+    }
+
+    override fun registerProtectedRoutes(route: Route) {
+
         route.post("/markets") {
             val market = call.receive<Market>()
             val saved = marketRepository.save(market)
