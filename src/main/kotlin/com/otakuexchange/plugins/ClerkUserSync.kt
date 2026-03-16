@@ -4,17 +4,18 @@ import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.user.AuthProvider
 import com.otakuexchange.domain.user.User
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.auth.*
+import io.ktor.server.routing.*
 import org.koin.ktor.ext.get
 import org.slf4j.LoggerFactory
 
 private val syncLogger = LoggerFactory.getLogger("ClerkUserSync")
 
-val ClerkUserSync = createApplicationPlugin("ClerkUserSync") {
-    on(AuthenticationChecked) { call ->
-        val principal = call.principal<JWTPrincipal>("clerk") ?: return@on
-        val clerkId = principal.payload.subject ?: return@on
+fun Route.syncClerkUser() {
+    intercept(ApplicationCallPipeline.Call) {
+        val principal = call.principal<JWTPrincipal>() ?: return@intercept
+        val clerkId = principal.payload.subject ?: return@intercept
         val userRepository = call.application.get<IUserRepository>()
 
         try {

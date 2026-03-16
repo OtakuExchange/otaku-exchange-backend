@@ -5,14 +5,13 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-enum class AuthProvider { GOOGLE, DISCORD, EMAIL, CLERK }
+enum class AuthProvider { CLERK }
 
 @Serializable
 data class User(
     val id: Uuid = Uuid.random(),
     val username: String,
     val email: String,
-    val passwordHash: String? = null,
     val authProvider: AuthProvider,
     val providerUserId: String? = null,
     val balance: Long = 0L,

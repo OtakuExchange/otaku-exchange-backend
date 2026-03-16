@@ -7,7 +7,6 @@ object UserTable : Table("users") {
     val id = uuid("id")
     val username = text("username").uniqueIndex()
     val email = text("email").uniqueIndex()
-    val passwordHash = text("password_hash").nullable()
     val authProvider = text("auth_provider")
     val providerUserId = text("provider_user_id").nullable().index()
     val balance = long("balance").default(0L)

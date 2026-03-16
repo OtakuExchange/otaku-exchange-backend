@@ -25,15 +25,20 @@ fun Application.configureRouting() {
             call.respondText("ok")
         }
 
-        // Public: register / login / OAuth flows
-        authController.registerRoutes(this)
-        topicController.registerRoutes(this)
-        marketController.registerRoutes(this)
-        eventController.registerRoutes(this)
+        // Sync user on every request where a valid Clerk JWT is present
+        authenticate("clerk", optional = true) {
+            syncClerkUser()
 
-        // Protected: all resource endpoints require a valid Clerk JWT
-        authenticate("clerk") {
-            
+            // Public routes
+            authController.registerRoutes(this)
+            topicController.registerRoutes(this)
+            marketController.registerRoutes(this)
+            eventController.registerRoutes(this)
+
+            // Protected routes — auth enforced
+            authenticate("clerk") {
+
+            }
         }
     }
 }

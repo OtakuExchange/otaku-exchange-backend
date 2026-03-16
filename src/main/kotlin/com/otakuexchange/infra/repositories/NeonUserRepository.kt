@@ -48,7 +48,6 @@ class NeonUserRepository : IUserRepository {
             it[id] = user.id
             it[username] = user.username
             it[email] = user.email
-            it[passwordHash] = user.passwordHash
             it[authProvider] = user.authProvider.name
             it[providerUserId] = user.providerUserId
             it[balance] = user.balance
@@ -74,7 +73,6 @@ class NeonUserRepository : IUserRepository {
         id = this[UserTable.id],
         username = this[UserTable.username],
         email = this[UserTable.email],
-        passwordHash = this[UserTable.passwordHash],
         authProvider = AuthProvider.valueOf(this[UserTable.authProvider]),
         providerUserId = this[UserTable.providerUserId],
         balance = this[UserTable.balance],
