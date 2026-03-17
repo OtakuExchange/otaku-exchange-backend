@@ -2,9 +2,10 @@ package com.otakuexchange.infra.repositories
 
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.event.Event
+import com.otakuexchange.domain.event.EventWithBookmark
+import com.otakuexchange.infra.tables.BookmarkTable
 import com.otakuexchange.infra.tables.EventTable
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -14,28 +15,30 @@ import kotlin.uuid.Uuid
 
 class NeonEventRepository : IEventRepository {
 
-    override suspend fun getEventsByTopicId(topicId: Uuid): List<Event> = transaction {
-        EventTable.selectAll()
+    override suspend fun getEventsByTopicId(topicId: Uuid, currentUserId: Uuid?): List<EventWithBookmark> = transaction {
+        val events = EventTable.selectAll()
             .where { EventTable.topicId eq topicId }
             .map { it.toEvent() }
+        events.map { it.withBookmark(currentUserId) }
     }
 
-    override suspend fun getById(id: Uuid): Event? = transaction {
+    override suspend fun getById(id: Uuid, currentUserId: Uuid?): EventWithBookmark? = transaction {
         EventTable.selectAll()
             .where { EventTable.id eq id }
             .singleOrNull()
             ?.toEvent()
+            ?.withBookmark(currentUserId)
     }
 
     override suspend fun save(event: Event): Event = transaction {
         EventTable.insert {
-            it[id] = event.id
-            it[topicId] = event.topicId
-            it[format] = event.format
-            it[name] = event.name
-            it[description] = event.description
-            it[closeTime] = event.closeTime
-            it[status] = event.status
+            it[id]             = event.id
+            it[topicId]        = event.topicId
+            it[format]         = event.format
+            it[name]           = event.name
+            it[description]    = event.description
+            it[closeTime]      = event.closeTime
+            it[status]         = event.status
             it[resolutionRule] = event.resolutionRule
         }
         event
@@ -43,11 +46,11 @@ class NeonEventRepository : IEventRepository {
 
     override suspend fun update(event: Event): Event = transaction {
         EventTable.update({ EventTable.id eq event.id }) {
-            it[format] = event.format
-            it[name] = event.name
-            it[description] = event.description
-            it[closeTime] = event.closeTime
-            it[status] = event.status
+            it[format]         = event.format
+            it[name]           = event.name
+            it[description]    = event.description
+            it[closeTime]      = event.closeTime
+            it[status]         = event.status
             it[resolutionRule] = event.resolutionRule
         }
         event
@@ -60,13 +63,33 @@ class NeonEventRepository : IEventRepository {
     // ── Row mapper ────────────────────────────────────────────────────────────
 
     private fun ResultRow.toEvent() = Event(
-        id = this[EventTable.id],
-        topicId = this[EventTable.topicId],
-        format = this[EventTable.format],
-        name = this[EventTable.name],
-        description = this[EventTable.description],
-        closeTime = this[EventTable.closeTime],
-        status = this[EventTable.status],
+        id             = this[EventTable.id],
+        topicId        = this[EventTable.topicId],
+        format         = this[EventTable.format],
+        name           = this[EventTable.name],
+        description    = this[EventTable.description],
+        closeTime      = this[EventTable.closeTime],
+        status         = this[EventTable.status],
         resolutionRule = this[EventTable.resolutionRule]
     )
+
+    private fun Event.withBookmark(currentUserId: Uuid?): EventWithBookmark {
+        val bookmarked = if (currentUserId != null) {
+            BookmarkTable.selectAll()
+                .where { (BookmarkTable.eventId eq id) and (BookmarkTable.userId eq currentUserId) }
+                .singleOrNull() != null
+        } else false
+
+        return EventWithBookmark(
+            id             = id,
+            topicId        = topicId,
+            format         = format,
+            name           = name,
+            description    = description,
+            closeTime      = closeTime,
+            status         = status,
+            resolutionRule = resolutionRule,
+            bookmarked     = bookmarked
+        )
+    }
 }

@@ -3,6 +3,7 @@ package com.otakuexchange.application.controllers
 import com.otakuexchange.domain.event.Event
 import com.otakuexchange.domain.market.Comment
 import kotlinx.serialization.Serializable
+import com.otakuexchange.domain.repositories.IBookmarkRepository
 import com.otakuexchange.domain.repositories.ICommentRepository
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IUserRepository
@@ -22,7 +23,8 @@ data class CreateCommentRequest(val content: String, val parentId: Uuid? = null)
 class EventController(
     private val eventRepository: IEventRepository,
     private val commentRepository: ICommentRepository,
-    private val userRepository: IUserRepository
+    private val userRepository: IUserRepository,
+    private val bookmarkRepository: IBookmarkRepository
 ) : IRouteController {
 
     override fun registerRoutes(route: Route) {
@@ -34,8 +36,10 @@ class EventController(
                 call.respond(HttpStatusCode.BadRequest, "Invalid topicId")
                 return@get
             }
-            val events = eventRepository.getEventsByTopicId(topicId)
-            call.respond(events)
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            call.respond(eventRepository.getEventsByTopicId(topicId, currentUser?.id))
         }
 
         route.get("/events/{id}") {
@@ -45,7 +49,10 @@ class EventController(
                 call.respond(HttpStatusCode.BadRequest, "Invalid id")
                 return@get
             }
-            val event = eventRepository.getById(id)
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            val event = eventRepository.getById(id, currentUser?.id)
             if (event == null) call.respond(HttpStatusCode.NotFound, "Event not found")
             else call.respond(event)
         }
@@ -110,6 +117,34 @@ class EventController(
             val unliked = commentRepository.unlikeComment(commentId, user.id)
             if (unliked) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.NotFound, "Like not found")
+        }
+
+        route.post("/events/{id}/bookmark") {
+            val eventId = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@post
+            }
+            val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val added = bookmarkRepository.addBookmark(user.id, eventId)
+            if (added) call.respond(HttpStatusCode.NoContent)
+            else call.respond(HttpStatusCode.Conflict, "Already bookmarked")
+        }
+
+        route.delete("/events/{id}/bookmark") {
+            val eventId = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@delete
+            }
+            val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
+                ?: return@delete call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val removed = bookmarkRepository.removeBookmark(user.id, eventId)
+            if (removed) call.respond(HttpStatusCode.NoContent)
+            else call.respond(HttpStatusCode.NotFound, "Bookmark not found")
         }
 
         route.post("/events") {
