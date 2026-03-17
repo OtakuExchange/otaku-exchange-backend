@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.datetime.*
 
 object EventTable : Table("events") {
     val id = uuid("id")
-    val topicId = uuid("topic_id").references(TopicTable.id, onDelete = ReferenceOption.RESTRICT).index()
+    val topicId = uuid("topic_id").references(TopicTable.id, onDelete = ReferenceOption.CASCADE).index()
     val format = text("format")
     val name = text("name")
     val description = text("description")
