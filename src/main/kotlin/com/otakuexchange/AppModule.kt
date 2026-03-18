@@ -7,8 +7,10 @@ import com.otakuexchange.domain.repositories.IMarketRepository
 import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.repositories.ICommentRepository
 import com.otakuexchange.domain.repositories.IBookmarkRepository
+import com.otakuexchange.domain.repositories.IEntityRepository
 import com.otakuexchange.infra.repositories.NeonTopicRepository
 import com.otakuexchange.infra.repositories.NeonBookmarkRepository
+import com.otakuexchange.infra.repositories.NeonEntityRepository
 import com.otakuexchange.infra.repositories.NeonEventRepository
 import com.otakuexchange.infra.repositories.NeonMarketRepository
 import com.otakuexchange.infra.repositories.NeonUserRepository
@@ -35,10 +37,11 @@ val appModule = module {
     single<IUserRepository> { NeonUserRepository() }
     single<ICommentRepository> { NeonCommentRepository() }
     single<IBookmarkRepository> { NeonBookmarkRepository() }
+    single<IEntityRepository> { NeonEntityRepository() }
     single<IOrderBookRepository> { RedisOrderBookRepository() }
 
     single<IRouteController>(named("topicController")) { TopicController(get()) }
-    single<IRouteController>(named("marketController")) { MarketController(get()) }
+    single<IRouteController>(named("marketController")) { MarketController(get(), get()) }
     single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get()) }
     single<IRouteController>(named("authController")) { AuthController(get()) }
 }

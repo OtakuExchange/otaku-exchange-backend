@@ -4,10 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
 
 @Serializable
-data class Market(
-    val id: Uuid = Uuid.random(),
+data class MarketWithEntity(
+    val id: Uuid,
     val eventId: Uuid,
-    val entityId: Uuid? = null,
+    val entity: Entity? = null,
     val label: String,
     val status: String
 )

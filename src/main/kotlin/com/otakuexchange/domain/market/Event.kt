@@ -13,5 +13,6 @@ data class Event(
     val description: String,
     val closeTime: Instant,
     val status: String,
-    val resolutionRule: String
+    val resolutionRule: String,
+    val logoPath: String? = null
 )

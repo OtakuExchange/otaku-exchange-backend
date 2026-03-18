@@ -1,6 +1,8 @@
 package com.otakuexchange.application.controllers
 
+import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.market.Market
+import com.otakuexchange.domain.repositories.IEntityRepository
 import com.otakuexchange.domain.repositories.IMarketRepository
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.*
@@ -8,7 +10,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.uuid.Uuid
 
-class MarketController(private val marketRepository: IMarketRepository) : IRouteController {
+class MarketController(
+    private val marketRepository: IMarketRepository,
+    private val entityRepository: IEntityRepository
+) : IRouteController {
 
     override fun registerRoutes(route: Route) {
 
@@ -35,9 +40,31 @@ class MarketController(private val marketRepository: IMarketRepository) : IRoute
             else call.respond(market)
         }
 
+        route.get("/entities") {
+            call.respond(entityRepository.getAll())
+        }
+
+        route.get("/entities/{id}") {
+            val id = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@get
+            }
+            val entity = entityRepository.getById(id)
+            if (entity == null) call.respond(HttpStatusCode.NotFound, "Entity not found")
+            else call.respond(entity)
+        }
+
     }
 
     override fun registerProtectedRoutes(route: Route) {
+
+        route.post("/entities") {
+            val entity = call.receive<Entity>()
+            val saved = entityRepository.save(entity)
+            call.respond(HttpStatusCode.Created, saved)
+        }
 
         route.post("/markets") {
             val market = call.receive<Market>()

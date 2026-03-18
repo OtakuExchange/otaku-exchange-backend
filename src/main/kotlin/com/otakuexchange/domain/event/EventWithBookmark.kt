@@ -14,5 +14,6 @@ data class EventWithBookmark(
     val closeTime: Instant,
     val status: String,
     val resolutionRule: String,
+    val logoPath: String? = null,
     val bookmarked: Boolean
 )

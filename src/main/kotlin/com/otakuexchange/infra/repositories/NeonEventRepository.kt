@@ -40,6 +40,7 @@ class NeonEventRepository : IEventRepository {
             it[closeTime]      = event.closeTime
             it[status]         = event.status
             it[resolutionRule] = event.resolutionRule
+            it[logoPath]       = event.logoPath
         }
         event
     }
@@ -52,6 +53,7 @@ class NeonEventRepository : IEventRepository {
             it[closeTime]      = event.closeTime
             it[status]         = event.status
             it[resolutionRule] = event.resolutionRule
+            it[logoPath]       = event.logoPath
         }
         event
     }
@@ -70,7 +72,8 @@ class NeonEventRepository : IEventRepository {
         description    = this[EventTable.description],
         closeTime      = this[EventTable.closeTime],
         status         = this[EventTable.status],
-        resolutionRule = this[EventTable.resolutionRule]
+        resolutionRule = this[EventTable.resolutionRule],
+        logoPath       = this[EventTable.logoPath]
     )
 
     private fun Event.withBookmark(currentUserId: Uuid?): EventWithBookmark {
@@ -89,6 +92,7 @@ class NeonEventRepository : IEventRepository {
             closeTime      = closeTime,
             status         = status,
             resolutionRule = resolutionRule,
+            logoPath       = logoPath,
             bookmarked     = bookmarked
         )
     }

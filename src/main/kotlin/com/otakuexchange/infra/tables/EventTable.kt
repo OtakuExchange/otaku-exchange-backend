@@ -13,6 +13,7 @@ object EventTable : Table("events") {
     val closeTime = timestamp("close_time")
     val status = text("status")
     val resolutionRule = text("resolution_rule")
+    val logoPath = text("logo_path").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
