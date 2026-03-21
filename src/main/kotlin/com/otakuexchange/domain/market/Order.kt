@@ -6,7 +6,6 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 enum class OrderSide { BUY, SELL }
-enum class OrderStatus { OPEN, CANCELLED, FULFILLED }
 enum class OrderType { LIMIT, MARKET }
 
 @Serializable
@@ -15,11 +14,9 @@ data class Order(
     val userId: Uuid,
     val marketId: Uuid,
     val side: OrderSide,
-    val price: Double,
-    val quantity: Double,
-    val remaining: Double = quantity,
-    val status: OrderStatus = OrderStatus.OPEN,
+    val price: Int,       // in cents, 1–99
+    val quantity: Int,    // number of contracts
+    val remaining: Int = quantity,
     val orderType: OrderType,
-    val createdAt: Instant = Clock.System.now(),
-    val executedAt: Instant? = null
+    val createdAt: Instant = Clock.System.now()
 )
