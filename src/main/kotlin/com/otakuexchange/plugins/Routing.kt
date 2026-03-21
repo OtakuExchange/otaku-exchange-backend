@@ -21,6 +21,7 @@ fun Application.configureRouting() {
     val eventController    = get<IRouteController>(named("eventController"))
     val subtopicController = get<IRouteController>(named("subtopicController"))
     val orderController   = get<IRouteController>(named("orderController"))
+    val rankController     = get<IRouteController>(named("rankController"))
 
     routing {
         get("/health") {
@@ -36,6 +37,7 @@ fun Application.configureRouting() {
             eventController.registerRoutes(this)
             orderController.registerRoutes(this)
             subtopicController.registerRoutes(this)
+            rankController.registerRoutes(this)
         }
 
         // Protected writes — valid Clerk JWT required
