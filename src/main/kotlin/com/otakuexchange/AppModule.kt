@@ -12,6 +12,8 @@ import com.otakuexchange.domain.repositories.IOrderRecordRepository
 import com.otakuexchange.domain.repositories.ITradeHistoryRepository
 import com.otakuexchange.domain.repositories.IOrderBookRepository
 import com.otakuexchange.domain.services.OrderMatchingService
+import com.otakuexchange.domain.repositories.ISubtopicRepository
+import com.otakuexchange.infra.repositories.NeonSubtopicRepository
 import com.otakuexchange.infra.repositories.NeonTopicRepository
 import com.otakuexchange.infra.repositories.NeonBookmarkRepository
 import com.otakuexchange.infra.repositories.NeonEntityRepository
@@ -28,6 +30,7 @@ import com.otakuexchange.application.controllers.MarketController
 import com.otakuexchange.application.controllers.EventController
 import com.otakuexchange.application.controllers.AuthController
 import com.otakuexchange.application.controllers.OrderController
+import com.otakuexchange.application.controllers.SubtopicController
 import org.koin.core.qualifier.named
 
 val appModule = module {
@@ -41,6 +44,7 @@ val appModule = module {
     single<IEntityRepository> { NeonEntityRepository() }
     single<IOrderRecordRepository> { NeonOrderRecordRepository() }
     single<ITradeHistoryRepository> { NeonTradeHistoryRepository() }
+    single<ISubtopicRepository> { NeonSubtopicRepository() }
     single<IOrderBookRepository> { RedisOrderBookRepository() }
 
     // Services
@@ -50,6 +54,7 @@ val appModule = module {
     single<IRouteController>(named("topicController")) { TopicController(get()) }
     single<IRouteController>(named("marketController")) { MarketController(get(), get()) }
     single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get()) }
+    single<IRouteController>(named("subtopicController")) { SubtopicController(get(), get()) }
     single<IRouteController>(named("authController")) { AuthController(get()) }
     single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get()) }
 }

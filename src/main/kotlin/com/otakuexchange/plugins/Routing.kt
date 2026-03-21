@@ -15,10 +15,11 @@ fun Application.configureRouting() {
         json()
     }
 
-    val authController    = get<IRouteController>(named("authController"))
-    val topicController   = get<IRouteController>(named("topicController"))
-    val marketController  = get<IRouteController>(named("marketController"))
-    val eventController   = get<IRouteController>(named("eventController"))
+    val authController     = get<IRouteController>(named("authController"))
+    val topicController    = get<IRouteController>(named("topicController"))
+    val marketController   = get<IRouteController>(named("marketController"))
+    val eventController    = get<IRouteController>(named("eventController"))
+    val subtopicController = get<IRouteController>(named("subtopicController"))
     val orderController   = get<IRouteController>(named("orderController"))
 
     routing {
@@ -34,6 +35,7 @@ fun Application.configureRouting() {
             marketController.registerRoutes(this)
             eventController.registerRoutes(this)
             orderController.registerRoutes(this)
+            subtopicController.registerRoutes(this)
         }
 
         // Protected writes — valid Clerk JWT required
@@ -42,6 +44,7 @@ fun Application.configureRouting() {
             marketController.registerProtectedRoutes(this)
             eventController.registerProtectedRoutes(this)
             orderController.registerProtectedRoutes(this)
+            subtopicController.registerProtectedRoutes(this)
         }
     }
 }

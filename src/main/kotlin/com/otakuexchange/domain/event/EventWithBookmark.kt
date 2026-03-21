@@ -15,5 +15,6 @@ data class EventWithBookmark(
     val status: String,
     val resolutionRule: String,
     val logoPath: String? = null,
+    val pandaScoreId: Long? = null,
     val bookmarked: Boolean
 )

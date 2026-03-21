@@ -94,7 +94,7 @@ class OrderController(
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Market not found")
             val eventWithBookmark = eventRepository.getById(marketWithEntity.eventId, user.id)
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
-            val topic = topicRepository.getById(eventWithBookmark.topicId)
+            val topicWithSubtopics = topicRepository.getById(eventWithBookmark.topicId)
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Topic not found")
 
             val market = Market(
@@ -112,6 +112,12 @@ class OrderController(
                 closeTime = eventWithBookmark.closeTime,
                 status = eventWithBookmark.status,
                 resolutionRule = eventWithBookmark.resolutionRule
+            )
+            // Extract base Topic from TopicWithSubtopics
+            val topic = Topic(
+                id = topicWithSubtopics.id,
+                topic = topicWithSubtopics.topic,
+                description = topicWithSubtopics.description
             )
 
             val userOrder = order.copy(userId = user.id)
