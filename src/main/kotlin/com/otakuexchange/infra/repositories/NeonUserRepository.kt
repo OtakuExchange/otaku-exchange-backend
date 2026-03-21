@@ -7,6 +7,7 @@ import com.otakuexchange.infra.tables.UserTable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -65,6 +66,16 @@ class NeonUserRepository : IUserRepository {
             .where { UserTable.id eq id }
             .singleOrNull()
             ?.toUser() ?: error("User not found after update")
+    }
+
+    override suspend fun addBalance(id: Uuid, amount: Long): User = transaction {
+        UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.balance] = UserTable.balance + amount
+        }
+        UserTable.selectAll()
+            .where { UserTable.id eq id }
+            .singleOrNull()
+            ?.toUser() ?: error("User not found after balance update")
     }
 
     // ── Row mapper ────────────────────────────────────────────────────────────

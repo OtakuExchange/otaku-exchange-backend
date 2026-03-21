@@ -11,4 +11,5 @@ interface IUserRepository {
     suspend fun findByUsername(username: String): User?
     suspend fun save(user: User): User
     suspend fun updateUsername(id: Uuid, username: String): User
+    suspend fun addBalance(id: Uuid, amount: Long): User
 }

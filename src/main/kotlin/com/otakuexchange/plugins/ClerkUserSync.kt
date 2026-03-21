@@ -3,6 +3,7 @@ package com.otakuexchange.plugins
 import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.user.AuthProvider
 import com.otakuexchange.domain.user.User
+import com.otakuexchange.infra.RedisFactory
 import io.ktor.server.application.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.auth.*
@@ -12,6 +13,10 @@ import org.slf4j.LoggerFactory
 
 private val syncLogger = LoggerFactory.getLogger("ClerkUserSync")
 
+private const val STARTING_BALANCE = 50000L       // $500 in cents
+private const val DAILY_REWARD = 2000L            // $20 in cents
+private const val DAILY_REWARD_TTL = 86400L        // 24 hours in seconds
+
 fun Route.syncClerkUser() {
     intercept(ApplicationCallPipeline.Call) {
         val principal = call.principal<JWTPrincipal>() ?: return@intercept
@@ -19,23 +24,46 @@ fun Route.syncClerkUser() {
         val userRepository = call.application.get<IUserRepository>()
 
         try {
-            if (userRepository.findByProviderUserId(clerkId, AuthProvider.CLERK) == null) {
-                val email    = principal.payload.getClaim("email").asString()
+            val existingUser = userRepository.findByProviderUserId(clerkId, AuthProvider.CLERK)
+
+            if (existingUser == null) {
+                // New user — create with starting balance
+                val email = principal.payload.getClaim("email").asString()
                     ?: "$clerkId@clerk.placeholder"
                 val username = principal.payload.getClaim("username").asString()
                     ?: clerkId
 
                 syncLogger.info("Creating new user for Clerk ID: $clerkId")
-                userRepository.save(
+                val newUser = userRepository.save(
                     User(
-                        username       = username,
-                        email          = email,
-                        authProvider   = AuthProvider.CLERK,
+                        username = username,
+                        email = email,
+                        authProvider = AuthProvider.CLERK,
                         providerUserId = clerkId,
-                        balance        = 500L,
+                        balance = STARTING_BALANCE
                     )
                 )
-                syncLogger.info("Created user for Clerk ID: $clerkId")
+                syncLogger.info("Created user ${newUser.id} for Clerk ID: $clerkId")
+
+                // Set daily reward key so they don't get double reward on first day
+                RedisFactory.pool.getResource().use { jedis ->
+                    jedis.setex("daily:reward:${newUser.id}", DAILY_REWARD_TTL, "1")
+                }
+
+            } else {
+                // Existing user — check daily reward
+                val rewardKey = "daily:reward:${existingUser.id}"
+                val alreadyClaimed = RedisFactory.pool.getResource().use { jedis ->
+                    jedis.exists(rewardKey)
+                }
+
+                if (!alreadyClaimed) {
+                    userRepository.addBalance(existingUser.id, DAILY_REWARD)
+                    RedisFactory.pool.getResource().use { jedis ->
+                        jedis.setex(rewardKey, DAILY_REWARD_TTL, "1")
+                    }
+                    syncLogger.info("Daily reward of $${ DAILY_REWARD / 100 } awarded to user ${existingUser.id}")
+                }
             }
         } catch (e: Exception) {
             syncLogger.error("Failed to sync Clerk user $clerkId: ${e.javaClass.simpleName}: ${e.message}", e)
