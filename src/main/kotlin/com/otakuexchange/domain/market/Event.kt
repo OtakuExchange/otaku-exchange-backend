@@ -14,5 +14,6 @@ data class Event(
     val closeTime: Instant,
     val status: String,
     val resolutionRule: String,
-    val logoPath: String? = null
+    val logoPath: String? = null,
+    val pandaScoreId: Long? = null
 )

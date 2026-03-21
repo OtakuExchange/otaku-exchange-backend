@@ -14,6 +14,7 @@ object EventTable : Table("events") {
     val status = text("status")
     val resolutionRule = text("resolution_rule")
     val logoPath = text("logo_path").nullable()
+    val pandaScoreId = long("panda_score_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -6,12 +6,9 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 @Serializable
-data class Entity(
+data class Subtopic(
     val id: Uuid = Uuid.random(),
+    val topicId: Uuid,
     val name: String,
-    val abbreviatedName: String? = null,
-    val logoPath: String,
-    val color: String? = null,
-    val pandaScoreId: Long? = null,
     val createdAt: Instant = Clock.System.now()
 )

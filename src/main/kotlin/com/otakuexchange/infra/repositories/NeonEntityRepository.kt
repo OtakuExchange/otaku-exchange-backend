@@ -19,6 +19,7 @@ class NeonEntityRepository : IEntityRepository {
             it[abbreviatedName] = entity.abbreviatedName
             it[logoPath]       = entity.logoPath
             it[color]          = entity.color
+            it[pandaScoreId]   = entity.pandaScoreId
             it[createdAt]      = entity.createdAt
         }
         entity
@@ -41,6 +42,7 @@ class NeonEntityRepository : IEntityRepository {
         abbreviatedName = this[EntityTable.abbreviatedName],
         logoPath       = this[EntityTable.logoPath],
         color          = this[EntityTable.color],
+        pandaScoreId   = this[EntityTable.pandaScoreId],
         createdAt      = this[EntityTable.createdAt]
     )
 }
