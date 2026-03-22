@@ -11,7 +11,7 @@ enum class OrderType { LIMIT, MARKET }
 @Serializable
 data class Order(
     val id: Uuid = Uuid.random(),
-    val userId: Uuid,
+    val userId: Uuid = Uuid.random(),
     val marketId: Uuid,
     val side: OrderSide,
     val price: Int,           // YES price in cents, 1–99. NO price = 100 - price
