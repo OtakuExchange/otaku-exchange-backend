@@ -2,6 +2,7 @@ package com.otakuexchange.infra.tables
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.datetime.timestamp
 
 object MarketTable : Table("markets") {
     val id = uuid("id")

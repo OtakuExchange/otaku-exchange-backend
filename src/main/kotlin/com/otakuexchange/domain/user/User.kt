@@ -16,6 +16,7 @@ data class User(
     val providerUserId: String? = null,
     val balance: Long = 0L,
     val lockedBalance: Long = 0L,
+    val isAdmin: Boolean = false,
     val createdAt: Instant = Clock.System.now()
 ) {
     val availableBalance: Long get() = balance - lockedBalance

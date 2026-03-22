@@ -11,6 +11,7 @@ object UserTable : Table("users") {
     val providerUserId = text("provider_user_id").nullable().index()
     val balance = long("balance").default(0L)
     val lockedBalance = long("locked_balance").default(0L)
+    val isAdmin = bool("is_admin").default(false)
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)

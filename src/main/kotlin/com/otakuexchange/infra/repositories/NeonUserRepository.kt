@@ -54,6 +54,7 @@ class NeonUserRepository : IUserRepository {
             it[providerUserId] = user.providerUserId
             it[balance] = user.balance
             it[lockedBalance] = user.lockedBalance
+            it[isAdmin] = user.isAdmin
             it[createdAt] = user.createdAt
         }
         user
@@ -115,6 +116,7 @@ class NeonUserRepository : IUserRepository {
         providerUserId = this[UserTable.providerUserId],
         balance = this[UserTable.balance],
         lockedBalance = this[UserTable.lockedBalance],
+        isAdmin = this[UserTable.isAdmin],
         createdAt = this[UserTable.createdAt]
     )
 }
