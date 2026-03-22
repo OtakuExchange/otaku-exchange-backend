@@ -12,24 +12,46 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class UpdateUsernameRequest(val username: String)
 
+@Serializable
+data class CurrentUserResponse(
+    val id: String,
+    val username: String,
+    val email: String,
+    val balance: Long,
+    val lockedBalance: Long,
+    val isAdmin: Boolean
+)
+
 class AuthController(
     private val userRepository: IUserRepository
 ) : IRouteController {
 
     override fun registerRoutes(route: Route) {
         route.authenticate("clerk") {
+
+            get("/users/me") {
+                val clerkId = call.clerkUserId
+                val user = userRepository.findByProviderUserId(clerkId, AuthProvider.CLERK)
+                    ?: return@get call.respond(HttpStatusCode.NotFound, "User not found")
+                call.respond(CurrentUserResponse(
+                    id = user.id.toString(),
+                    username = user.username,
+                    email = user.email,
+                    balance = user.balance,
+                    lockedBalance = user.lockedBalance,
+                    isAdmin = user.isAdmin
+                ))
+            }
+
             patch("/users/me/username") {
                 val clerkId = call.clerkUserId
                 val req = call.receive<UpdateUsernameRequest>()
-
                 val user = userRepository.findByProviderUserId(clerkId, AuthProvider.CLERK)
                     ?: return@patch call.respond(HttpStatusCode.NotFound, "User not found")
-
                 if (userRepository.findByUsername(req.username) != null) {
                     call.respond(HttpStatusCode.Conflict, "Username already taken")
                     return@patch
                 }
-
                 val updated = userRepository.updateUsername(user.id, req.username)
                 call.respond(updated)
             }
