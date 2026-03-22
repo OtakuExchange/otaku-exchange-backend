@@ -11,7 +11,7 @@ enum class OrderType { LIMIT, MARKET, NOTIONAL }
 @Serializable
 data class Order(
     val id: Uuid = Uuid.random(),
-    val userId: Uuid,
+    val userId: Uuid = Uuid.random(),
     val marketId: Uuid,
     val side: OrderSide,
     val price: Int,               // LIMIT: limit price. MARKET: ignored. NOTIONAL: max price cap (1-99, use 99 for no cap)
