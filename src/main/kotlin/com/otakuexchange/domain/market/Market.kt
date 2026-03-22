@@ -15,6 +15,8 @@ data class Market(
     val id: Uuid = Uuid.random(),
     val eventId: Uuid,
     val entityId: Uuid? = null,
+    val relatedEntityId: Uuid? = null,
     val label: String,
+    val isMatch: Boolean = false,
     val status: MarketStatus = MarketStatus.OPEN
 )
