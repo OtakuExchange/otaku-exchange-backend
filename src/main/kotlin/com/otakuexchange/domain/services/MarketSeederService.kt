@@ -25,8 +25,8 @@ class MarketSeederService(
         const val MAX_PRICE = 99
 
         // Normal distribution quantities per level (index 0 = closest to midpoint)
-        // Total per side = 210 contracts across 10 levels
-        val DEFAULT_QUANTITIES = intArrayOf(50, 45, 38, 28, 20, 13, 8, 5, 2, 1)
+        // Total per side = 105 contracts across 10 levels
+        val DEFAULT_QUANTITIES = intArrayOf(25, 23, 19, 14, 10, 7, 4, 2, 1, 1)
     }
 
     /**

@@ -13,11 +13,12 @@ object OrderRecordTable : Table("order_records") {
     val eventName = text("event_name")
     val topicId = uuid("topic_id").references(TopicTable.id, onDelete = ReferenceOption.RESTRICT).index()
     val topicName = text("topic_name")
-    val side = text("side")           // YES or NO
-    val price = integer("price")      // YES price in cents
+    val side = text("side")
+    val price = integer("price")
     val quantity = integer("quantity")
     val remaining = integer("remaining")
     val lockedAmount = long("locked_amount")
+    val notionalAmount = long("notional_amount").nullable()
     val status = text("status")
     val orderType = text("order_type")
     val createdAt = timestamp("created_at")

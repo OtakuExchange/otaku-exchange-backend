@@ -5,6 +5,7 @@ import com.otakuexchange.domain.market.Market
 import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.Order
 import com.otakuexchange.domain.market.OrderSide
+import com.otakuexchange.domain.market.OrderType
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IMarketRepository
@@ -92,20 +93,42 @@ class OrderController(
 
             val order = call.receive<Order>()
 
-            if (order.price !in 1..99) {
-                return@post call.respond(HttpStatusCode.BadRequest, "Price must be between 1 and 99 cents")
-            }
-            if (order.quantity <= 0) {
-                return@post call.respond(HttpStatusCode.BadRequest, "Quantity must be greater than 0")
+            // Validate based on order type
+            when (order.orderType) {
+                OrderType.LIMIT -> {
+                    if (order.price !in 1..99)
+                        return@post call.respond(HttpStatusCode.BadRequest, "Price must be between 1 and 99 cents")
+                    if (order.quantity <= 0)
+                        return@post call.respond(HttpStatusCode.BadRequest, "Quantity must be greater than 0")
+                }
+                OrderType.MARKET -> {
+                    if (order.quantity <= 0)
+                        return@post call.respond(HttpStatusCode.BadRequest, "Quantity must be greater than 0")
+                }
+                OrderType.NOTIONAL -> {
+                    if (order.notionalAmount == null || order.notionalAmount <= 0)
+                        return@post call.respond(HttpStatusCode.BadRequest, "notionalAmount must be provided and greater than 0")
+                    if (order.price !in 1..99)
+                        return@post call.respond(HttpStatusCode.BadRequest, "price cap must be between 1 and 99 cents (use 99 for no cap)")
+                }
             }
 
-            // YES order costs price × qty, NO order costs (100 - price) × qty
-            val cost = when (order.side) {
-                OrderSide.YES -> order.price.toLong() * order.quantity.toLong()
-                OrderSide.NO -> (100L - order.price.toLong()) * order.quantity.toLong()
+            // Calculate amount to lock:
+            // LIMIT:    lock price × quantity
+            // MARKET:   lock price × quantity (worst case, refunded if fills cheaper)
+            // NOTIONAL: lock the full notional budget
+            val cost: Long = when (order.orderType) {
+                OrderType.LIMIT -> when (order.side) {
+                    OrderSide.YES -> order.price.toLong() * order.quantity.toLong()
+                    OrderSide.NO -> (100L - order.price.toLong()) * order.quantity.toLong()
+                }
+                OrderType.MARKET -> when (order.side) {
+                    OrderSide.YES -> 99L * order.quantity.toLong() // worst case YES = 99¢
+                    OrderSide.NO -> 99L * order.quantity.toLong()  // worst case NO = 99¢
+                }
+                OrderType.NOTIONAL -> order.notionalAmount!!
             }
 
-            // Lock balance for both YES and NO — skip for seeder
             if (user.id != seederUserId) {
                 val locked = userRepository.lockBalance(user.id, cost)
                 if (!locked) {
@@ -122,7 +145,6 @@ class OrderController(
                     return@post call.respond(HttpStatusCode.NotFound, "Market not found")
                 }
 
-            // Check market is open using the status string — compare to enum name
             if (marketWithEntity.status != MarketStatus.OPEN.name) {
                 if (user.id != seederUserId) userRepository.unlockBalance(user.id, cost)
                 return@post call.respond(HttpStatusCode.Conflict, "Market is not open for trading")

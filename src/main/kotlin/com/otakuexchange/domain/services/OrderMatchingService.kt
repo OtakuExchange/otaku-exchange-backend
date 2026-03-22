@@ -58,7 +58,10 @@ class OrderMatchingService(
                 orderRecordRepository.save(order.toRecord(OrderStatus.OPEN, market, event, topic))
             }
             val pushToRedis = async(Dispatchers.IO) {
-                orderBookRepository.insertOrder(order)
+                // NOTIONAL orders don't rest in the book — they fill immediately or not at all
+                if (order.orderType != OrderType.NOTIONAL) {
+                    orderBookRepository.insertOrder(order)
+                }
             }
             saveRecord.await()
             pushToRedis.await()
@@ -90,71 +93,23 @@ class OrderMatchingService(
         when (incoming.orderType) {
             OrderType.LIMIT -> matchLimitOrder(incoming)
             OrderType.MARKET -> matchMarketOrder(incoming)
+            OrderType.NOTIONAL -> matchNotionalOrder(incoming)
         }
     }
 
     private suspend fun matchLimitOrder(incoming: Order) {
         val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
         var remaining = incoming.remaining
-
         val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide)
 
         for (candidate in candidates) {
             if (remaining <= 0) break
-
-            // Prices cross when YES price + NO price >= 100
             val pricesCross = incoming.price + candidate.price >= 100
             if (!pricesCross) break
 
             val fillQty = minOf(remaining, candidate.remaining)
             remaining -= fillQty
-            val now = Clock.System.now()
-            val candidateFilled = candidate.remaining - fillQty <= 0
-            val updatedCandidate = candidate.copy(remaining = candidate.remaining - fillQty)
-
-            val yesOrder = if (incoming.side == OrderSide.YES) incoming else candidate
-            val noOrder = if (incoming.side == OrderSide.NO) incoming else candidate
-
-            val trade = TradeHistory(
-                marketId = incoming.marketId,
-                yesOrderId = yesOrder.id,
-                noOrderId = noOrder.id,
-                yesPrice = yesOrder.price,
-                noPrice = noOrder.price,
-                quantity = fillQty,
-                executedAt = now
-            )
-
-            coroutineScope {
-                launch(Dispatchers.IO) { tradeHistoryRepository.save(trade) }
-                launch(Dispatchers.IO) {
-                    if (candidateFilled) orderBookRepository.removeOrder(candidate)
-                    else orderBookRepository.updateRemaining(updatedCandidate)
-                }
-                launch(Dispatchers.IO) {
-                    updateRecord(
-                        candidate.id,
-                        if (candidateFilled) 0 else updatedCandidate.remaining,
-                        if (candidateFilled) OrderStatus.FULFILLED else OrderStatus.PARTIALLY_FILLED,
-                        now
-                    )
-                }
-                // Consume locked balance and create positions for both sides
-                if (yesOrder.userId != seederUserId) {
-                    launch(Dispatchers.IO) {
-                        val yesLocked = yesOrder.price.toLong() * fillQty.toLong()
-                        userRepository.consumeLockedBalance(yesOrder.userId, yesLocked)
-                        positionRepository.upsertPosition(yesOrder.userId, incoming.marketId, OrderSide.YES, fillQty, yesOrder.price, yesLocked)
-                    }
-                }
-                if (noOrder.userId != seederUserId) {
-                    launch(Dispatchers.IO) {
-                        val noLocked = noOrder.price.toLong() * fillQty.toLong()
-                        userRepository.consumeLockedBalance(noOrder.userId, noLocked)
-                        positionRepository.upsertPosition(noOrder.userId, incoming.marketId, OrderSide.NO, fillQty, noOrder.price, noLocked)
-                    }
-                }
-            }
+            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
         }
 
         val now = Clock.System.now()
@@ -170,84 +125,141 @@ class OrderMatchingService(
                 if (incomingFulfilled) orderBookRepository.removeOrder(incoming.copy(remaining = 0))
                 else orderBookRepository.updateRemaining(incoming.copy(remaining = remaining))
             }
-            launch(Dispatchers.IO) {
-                updateRecord(incoming.id, remaining, incomingStatus, now)
-            }
+            launch(Dispatchers.IO) { updateRecord(incoming.id, remaining, incomingStatus, now) }
         }
     }
 
     private suspend fun matchMarketOrder(incoming: Order) {
         val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
         var remaining = incoming.remaining
-
         val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide, limit = 50)
 
         for (candidate in candidates) {
             if (remaining <= 0) break
-
             val fillQty = minOf(remaining, candidate.remaining)
             remaining -= fillQty
-            val now = Clock.System.now()
-            val candidateFilled = candidate.remaining - fillQty <= 0
-            val updatedCandidate = candidate.copy(remaining = candidate.remaining - fillQty)
-
-            val yesOrder = if (incoming.side == OrderSide.YES) incoming else candidate
-            val noOrder = if (incoming.side == OrderSide.NO) incoming else candidate
-
-            val trade = TradeHistory(
-                marketId = incoming.marketId,
-                yesOrderId = yesOrder.id,
-                noOrderId = noOrder.id,
-                yesPrice = yesOrder.price,
-                noPrice = noOrder.price,
-                quantity = fillQty,
-                executedAt = now
-            )
-
-            coroutineScope {
-                launch(Dispatchers.IO) { tradeHistoryRepository.save(trade) }
-                launch(Dispatchers.IO) {
-                    if (candidateFilled) orderBookRepository.removeOrder(candidate)
-                    else orderBookRepository.updateRemaining(updatedCandidate)
-                }
-                launch(Dispatchers.IO) {
-                    updateRecord(
-                        candidate.id,
-                        if (candidateFilled) 0 else updatedCandidate.remaining,
-                        if (candidateFilled) OrderStatus.FULFILLED else OrderStatus.PARTIALLY_FILLED,
-                        now
-                    )
-                }
-                if (yesOrder.userId != seederUserId) {
-                    launch(Dispatchers.IO) {
-                        val yesLocked = yesOrder.price.toLong() * fillQty.toLong()
-                        userRepository.consumeLockedBalance(yesOrder.userId, yesLocked)
-                        positionRepository.upsertPosition(yesOrder.userId, incoming.marketId, OrderSide.YES, fillQty, yesOrder.price, yesLocked)
-                    }
-                }
-                if (noOrder.userId != seederUserId) {
-                    launch(Dispatchers.IO) {
-                        val noLocked = noOrder.price.toLong() * fillQty.toLong()
-                        userRepository.consumeLockedBalance(noOrder.userId, noLocked)
-                        positionRepository.upsertPosition(noOrder.userId, incoming.marketId, OrderSide.NO, fillQty, noOrder.price, noLocked)
-                    }
-                }
-            }
+            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
         }
 
         val now = Clock.System.now()
         val finalStatus = if (remaining <= 0) OrderStatus.FULFILLED else OrderStatus.CANCELLED
         coroutineScope {
-            launch(Dispatchers.IO) {
-                orderBookRepository.removeOrder(incoming.copy(remaining = remaining))
-            }
-            launch(Dispatchers.IO) {
-                updateRecord(incoming.id, remaining, finalStatus, now)
-            }
+            launch(Dispatchers.IO) { orderBookRepository.removeOrder(incoming.copy(remaining = remaining)) }
+            launch(Dispatchers.IO) { updateRecord(incoming.id, remaining, finalStatus, now) }
+            // Refund unmatched portion
             if (remaining > 0 && incoming.userId != seederUserId) {
                 launch(Dispatchers.IO) {
-                    val refund = incoming.price.toLong() * remaining.toLong()
+                    val refund = 99L * remaining.toLong()
                     userRepository.unlockBalance(incoming.userId, refund)
+                }
+            }
+        }
+    }
+
+    private suspend fun matchNotionalOrder(incoming: Order) {
+        val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
+        var budgetRemaining = incoming.notionalAmount ?: return
+        var totalFilled = 0
+        val maxPriceCap = incoming.price  // user-set cap, 99 = no cap
+
+        val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide, limit = 50)
+
+        for (candidate in candidates) {
+            if (budgetRemaining <= 0) break
+
+            // Execution price for incoming side
+            val incomingExecPrice = if (incoming.side == OrderSide.YES) {
+                100 - candidate.price  // YES cost = 100 - NO resting price
+            } else {
+                100 - candidate.price  // NO cost = 100 - YES resting price
+            }
+
+            // Check price cap
+            if (incomingExecPrice > maxPriceCap) break
+
+            // How many contracts can we buy with remaining budget at this price?
+            val maxAffordable = (budgetRemaining / incomingExecPrice.toLong()).toInt()
+            if (maxAffordable <= 0) break
+
+            val fillQty = minOf(maxAffordable, candidate.remaining)
+            val fillCost = fillQty.toLong() * incomingExecPrice.toLong()
+
+            budgetRemaining -= fillCost
+            totalFilled += fillQty
+
+            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+        }
+
+        val now = Clock.System.now()
+        val finalStatus = if (totalFilled > 0) OrderStatus.FULFILLED else OrderStatus.CANCELLED
+
+        // Refund unspent budget
+        if (budgetRemaining > 0 && incoming.userId != seederUserId) {
+            userRepository.unlockBalance(incoming.userId, budgetRemaining)
+        }
+
+        // NOTIONAL orders never rest — always terminal
+        updateRecord(incoming.id, 0, finalStatus, now)
+    }
+
+    private suspend fun executeFill(incoming: Order, candidate: Order, fillQty: Int, isIncomingYes: Boolean) {
+        val now = Clock.System.now()
+        val candidateFilled = candidate.remaining - fillQty <= 0
+        val updatedCandidate = candidate.copy(remaining = candidate.remaining - fillQty)
+
+        val yesOrder = if (isIncomingYes) incoming else candidate
+        val noOrder = if (!isIncomingYes) incoming else candidate
+
+        // Execution price = resting candidate's price
+        val yesExecPrice = if (candidate.side == OrderSide.YES) candidate.price else (100 - candidate.price)
+        val noExecPrice = 100 - yesExecPrice  // always sums to 100¢
+
+        val trade = TradeHistory(
+            marketId = incoming.marketId,
+            yesOrderId = yesOrder.id,
+            noOrderId = noOrder.id,
+            yesPrice = yesExecPrice,
+            noPrice = noExecPrice,
+            quantity = fillQty,
+            executedAt = now
+        )
+
+        coroutineScope {
+            launch(Dispatchers.IO) { tradeHistoryRepository.save(trade) }
+            launch(Dispatchers.IO) {
+                if (candidateFilled) orderBookRepository.removeOrder(candidate)
+                else orderBookRepository.updateRemaining(updatedCandidate)
+            }
+            launch(Dispatchers.IO) {
+                updateRecord(
+                    candidate.id,
+                    if (candidateFilled) 0 else updatedCandidate.remaining,
+                    if (candidateFilled) OrderStatus.FULFILLED else OrderStatus.PARTIALLY_FILLED,
+                    now
+                )
+            }
+            // YES side settlement with surplus refund
+            if (yesOrder.userId != seederUserId) {
+                launch(Dispatchers.IO) {
+                    val yesActualCost = yesExecPrice.toLong() * fillQty.toLong()
+                    val yesLockedPerContract = if (yesOrder.id == incoming.id) incoming.price.toLong()
+                                               else candidate.price.toLong()
+                    val yesSurplus = (yesLockedPerContract * fillQty) - yesActualCost
+                    userRepository.consumeLockedBalance(yesOrder.userId, yesActualCost)
+                    if (yesSurplus > 0) userRepository.unlockBalance(yesOrder.userId, yesSurplus)
+                    positionRepository.upsertPosition(yesOrder.userId, incoming.marketId, OrderSide.YES, fillQty, yesExecPrice, yesActualCost)
+                }
+            }
+            // NO side settlement with surplus refund
+            if (noOrder.userId != seederUserId) {
+                launch(Dispatchers.IO) {
+                    val noActualCost = noExecPrice.toLong() * fillQty.toLong()
+                    val noLockedPerContract = if (noOrder.id == incoming.id) incoming.price.toLong()
+                                              else candidate.price.toLong()
+                    val noSurplus = (noLockedPerContract * fillQty) - noActualCost
+                    userRepository.consumeLockedBalance(noOrder.userId, noActualCost)
+                    if (noSurplus > 0) userRepository.unlockBalance(noOrder.userId, noSurplus)
+                    positionRepository.upsertPosition(noOrder.userId, incoming.marketId, OrderSide.NO, fillQty, noExecPrice, noActualCost)
                 }
             }
         }
@@ -281,6 +293,7 @@ class OrderMatchingService(
         quantity = quantity,
         remaining = remaining,
         lockedAmount = lockedAmount,
+        notionalAmount = notionalAmount,
         status = status,
         orderType = orderType,
         createdAt = createdAt,
