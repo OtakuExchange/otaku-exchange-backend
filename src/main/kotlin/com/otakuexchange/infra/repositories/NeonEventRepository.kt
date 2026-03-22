@@ -42,6 +42,7 @@ class NeonEventRepository : IEventRepository {
             it[resolutionRule] = event.resolutionRule
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
+            it[createdAt]      = event.createdAt
         }
         event
     }
@@ -76,7 +77,8 @@ class NeonEventRepository : IEventRepository {
         status         = this[EventTable.status],
         resolutionRule = this[EventTable.resolutionRule],
         logoPath       = this[EventTable.logoPath],
-        pandaScoreId   = this[EventTable.pandaScoreId]
+        pandaScoreId   = this[EventTable.pandaScoreId],
+        createdAt      = this[EventTable.createdAt]
     )
 
     private fun Event.withBookmark(currentUserId: Uuid?): EventWithBookmark {
@@ -97,6 +99,7 @@ class NeonEventRepository : IEventRepository {
             resolutionRule = resolutionRule,
             logoPath       = logoPath,
             pandaScoreId   = pandaScoreId,
+            createdAt      = createdAt,
             bookmarked     = bookmarked
         )
     }

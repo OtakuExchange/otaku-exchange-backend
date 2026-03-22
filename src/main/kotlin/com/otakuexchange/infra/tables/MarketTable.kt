@@ -10,6 +10,7 @@ object MarketTable : Table("markets") {
     val relatedEntityId = uuid("related_entity_id").references(EntityTable.id, onDelete = ReferenceOption.SET_NULL).nullable()
     val label = text("label")
     val isMatch = bool("is_match").default(false)
+    val createdAt = timestamp("created_at")
     val status = text("status").default("OPEN")
 
     override val primaryKey = PrimaryKey(id)

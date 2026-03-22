@@ -1,6 +1,8 @@
 package com.otakuexchange.domain.market
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 enum class MarketStatus {
@@ -18,5 +20,6 @@ data class Market(
     val relatedEntityId: Uuid? = null,
     val label: String,
     val isMatch: Boolean = false,
+    val createdAt: Instant = Clock.System.now(),
     val status: MarketStatus = MarketStatus.OPEN
 )

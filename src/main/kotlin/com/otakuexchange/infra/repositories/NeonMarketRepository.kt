@@ -50,6 +50,7 @@ class NeonMarketRepository : IMarketRepository {
             it[relatedEntityId] = market.relatedEntityId
             it[label]           = market.label
             it[isMatch]         = market.isMatch
+            it[createdAt]       = market.createdAt
             it[status]          = market.status.name
         }
         market
@@ -85,6 +86,7 @@ class NeonMarketRepository : IMarketRepository {
         relatedEntity = if (this[MarketTable.relatedEntityId] != null) toRelatedEntity() else null,
         label         = this[MarketTable.label],
         isMatch       = this[MarketTable.isMatch],
+        createdAt     = this[MarketTable.createdAt],
         status        = this[MarketTable.status]
     )
 
@@ -115,6 +117,7 @@ class NeonMarketRepository : IMarketRepository {
         relatedEntityId = this[MarketTable.relatedEntityId],
         label           = this[MarketTable.label],
         isMatch         = this[MarketTable.isMatch],
+        createdAt       = this[MarketTable.createdAt],
         status          = MarketStatus.valueOf(this[MarketTable.status])
     )
 }

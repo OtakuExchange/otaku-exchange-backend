@@ -1,6 +1,7 @@
 package com.otakuexchange.domain.event
 
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -15,5 +16,6 @@ data class Event(
     val status: String,
     val resolutionRule: String,
     val logoPath: String? = null,
-    val pandaScoreId: Long? = null
+    val pandaScoreId: Long? = null,
+    val createdAt: Instant = Clock.System.now()
 )
