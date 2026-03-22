@@ -16,6 +16,7 @@ fun Application.configureRouting() {
     }
 
     val authController     = get<IRouteController>(named("authController"))
+    val adminController    = get<IRouteController>(named("adminController"))
     val topicController    = get<IRouteController>(named("topicController"))
     val marketController   = get<IRouteController>(named("marketController"))
     val eventController    = get<IRouteController>(named("eventController"))
@@ -47,6 +48,7 @@ fun Application.configureRouting() {
             eventController.registerProtectedRoutes(this)
             orderController.registerProtectedRoutes(this)
             subtopicController.registerProtectedRoutes(this)
+            adminController.registerProtectedRoutes(this)
         }
     }
 }
