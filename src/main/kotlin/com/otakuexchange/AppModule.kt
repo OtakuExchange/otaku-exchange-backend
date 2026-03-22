@@ -13,7 +13,9 @@ import com.otakuexchange.domain.repositories.ITradeHistoryRepository
 import com.otakuexchange.domain.repositories.IOrderBookRepository
 import com.otakuexchange.domain.repositories.ISubtopicRepository
 import com.otakuexchange.domain.repositories.IRankRepository
+import com.otakuexchange.domain.repositories.IPositionRepository
 import com.otakuexchange.domain.services.OrderMatchingService
+import com.otakuexchange.domain.services.MarketSeederService
 import com.otakuexchange.infra.repositories.NeonSubtopicRepository
 import com.otakuexchange.infra.repositories.NeonTopicRepository
 import com.otakuexchange.infra.repositories.NeonBookmarkRepository
@@ -25,6 +27,7 @@ import com.otakuexchange.infra.repositories.NeonCommentRepository
 import com.otakuexchange.infra.repositories.NeonOrderRecordRepository
 import com.otakuexchange.infra.repositories.NeonTradeHistoryRepository
 import com.otakuexchange.infra.repositories.NeonRankRepository
+import com.otakuexchange.infra.repositories.NeonPositionRepository
 import com.otakuexchange.infra.repositories.RedisOrderBookRepository
 import com.otakuexchange.application.controllers.IRouteController
 import com.otakuexchange.application.controllers.TopicController
@@ -34,6 +37,7 @@ import com.otakuexchange.application.controllers.AuthController
 import com.otakuexchange.application.controllers.OrderController
 import com.otakuexchange.application.controllers.SubtopicController
 import com.otakuexchange.application.controllers.RankController
+import com.otakuexchange.application.controllers.AdminController
 import org.koin.core.qualifier.named
 
 val appModule = module {
@@ -50,9 +54,11 @@ val appModule = module {
     single<ISubtopicRepository> { NeonSubtopicRepository() }
     single<IOrderBookRepository> { RedisOrderBookRepository() }
     single<IRankRepository> { NeonRankRepository() }
+    single<IPositionRepository> { NeonPositionRepository() }
 
     // Services
-    single { OrderMatchingService(get(), get(), get()) }
+    single { OrderMatchingService(get(), get(), get(), get(), get()) }
+    single { MarketSeederService(get(), get()) }
 
     // Controllers
     single<IRouteController>(named("topicController")) { TopicController(get()) }
@@ -62,4 +68,5 @@ val appModule = module {
     single<IRouteController>(named("authController")) { AuthController(get()) }
     single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get()) }
     single<IRouteController>(named("rankController")) { RankController(get()) }
+    single<IRouteController>(named("adminController")) { AdminController(get(), get(), get(), get()) }
 }

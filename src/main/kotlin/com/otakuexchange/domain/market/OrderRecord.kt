@@ -18,10 +18,11 @@ data class OrderRecord(
     val topicId: Uuid,
     val topicName: String,
     // Order details
-    val side: OrderSide,
-    val price: Int,
+    val side: OrderSide,      // YES or NO
+    val price: Int,           // YES price in cents 1-99
     val quantity: Int,
     val remaining: Int,
+    val lockedAmount: Long,   // total cents locked for this order
     val status: OrderStatus = OrderStatus.OPEN,
     val orderType: OrderType,
     val createdAt: Instant,

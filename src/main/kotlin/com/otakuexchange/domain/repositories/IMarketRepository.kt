@@ -1,6 +1,7 @@
 package com.otakuexchange.domain.repositories
 
 import com.otakuexchange.domain.market.Market
+import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.MarketWithEntity
 import kotlin.uuid.Uuid
 
@@ -10,4 +11,5 @@ interface IMarketRepository {
     suspend fun save(market: Market): Market
     suspend fun update(market: Market): Market
     suspend fun delete(id: Uuid): Boolean
+    suspend fun updateStatus(marketId: Uuid, status: MarketStatus)
 }

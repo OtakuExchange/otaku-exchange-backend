@@ -8,9 +8,11 @@ import kotlin.uuid.Uuid
 data class TradeHistory(
     val id: Uuid = Uuid.random(),
     val marketId: Uuid,
-    val buyOrderId: Uuid,
-    val sellOrderId: Uuid,
-    val price: Int,       // in cents, the execution price
-    val quantity: Int,    // contracts filled in this trade
+    val yesOrderId: Uuid,     // the YES side order
+    val noOrderId: Uuid,      // the NO side order
+    val yesPrice: Int,        // YES execution price in cents
+    val noPrice: Int,         // NO execution price = 100 - yesPrice
+    val quantity: Int,
+    val escrowPerContract: Int = 100, // always 100¢ per contract pair
     val executedAt: Instant
 )

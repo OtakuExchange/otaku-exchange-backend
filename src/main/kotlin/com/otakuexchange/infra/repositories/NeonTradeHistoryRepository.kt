@@ -4,6 +4,7 @@ import com.otakuexchange.domain.market.TradeHistory
 import com.otakuexchange.domain.repositories.ITradeHistoryRepository
 import com.otakuexchange.infra.tables.TradeHistoryTable
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
@@ -19,10 +20,12 @@ class NeonTradeHistoryRepository : ITradeHistoryRepository {
         TradeHistoryTable.insert {
             it[id] = trade.id
             it[marketId] = trade.marketId
-            it[buyOrderId] = trade.buyOrderId
-            it[sellOrderId] = trade.sellOrderId
-            it[price] = trade.price
+            it[yesOrderId] = trade.yesOrderId
+            it[noOrderId] = trade.noOrderId
+            it[yesPrice] = trade.yesPrice
+            it[noPrice] = trade.noPrice
             it[quantity] = trade.quantity
+            it[escrowPerContract] = trade.escrowPerContract
             it[executedAt] = trade.executedAt
         }
         trade
@@ -46,13 +49,24 @@ class NeonTradeHistoryRepository : ITradeHistoryRepository {
             .map { it.toTradeHistory() }
     }
 
+    override suspend fun getLastTradedPrice(marketId: Uuid): Int? = transaction {
+        TradeHistoryTable.selectAll()
+            .where { TradeHistoryTable.marketId eq marketId }
+            .orderBy(TradeHistoryTable.executedAt, SortOrder.DESC)
+            .limit(1)
+            .singleOrNull()
+            ?.get(TradeHistoryTable.yesPrice)
+    }
+
     private fun ResultRow.toTradeHistory() = TradeHistory(
         id = this[TradeHistoryTable.id],
         marketId = this[TradeHistoryTable.marketId],
-        buyOrderId = this[TradeHistoryTable.buyOrderId],
-        sellOrderId = this[TradeHistoryTable.sellOrderId],
-        price = this[TradeHistoryTable.price],
+        yesOrderId = this[TradeHistoryTable.yesOrderId],
+        noOrderId = this[TradeHistoryTable.noOrderId],
+        yesPrice = this[TradeHistoryTable.yesPrice],
+        noPrice = this[TradeHistoryTable.noPrice],
         quantity = this[TradeHistoryTable.quantity],
+        escrowPerContract = this[TradeHistoryTable.escrowPerContract],
         executedAt = this[TradeHistoryTable.executedAt]
     )
 }

@@ -30,6 +30,7 @@ class NeonOrderRecordRepository : IOrderRecordRepository {
             it[price] = record.price
             it[quantity] = record.quantity
             it[remaining] = record.remaining
+            it[lockedAmount] = record.lockedAmount
             it[status] = record.status.name
             it[orderType] = record.orderType.name
             it[createdAt] = record.createdAt
@@ -79,6 +80,7 @@ class NeonOrderRecordRepository : IOrderRecordRepository {
         price = this[OrderRecordTable.price],
         quantity = this[OrderRecordTable.quantity],
         remaining = this[OrderRecordTable.remaining],
+        lockedAmount = this[OrderRecordTable.lockedAmount],
         status = OrderStatus.valueOf(this[OrderRecordTable.status]),
         orderType = OrderType.valueOf(this[OrderRecordTable.orderType]),
         createdAt = this[OrderRecordTable.createdAt],

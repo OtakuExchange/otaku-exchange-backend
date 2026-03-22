@@ -7,6 +7,7 @@ import com.otakuexchange.infra.tables.UserTable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.minus
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -78,7 +79,33 @@ class NeonUserRepository : IUserRepository {
             ?.toUser() ?: error("User not found after balance update")
     }
 
-    // ── Row mapper ────────────────────────────────────────────────────────────
+    override suspend fun lockBalance(id: Uuid, amount: Long): Boolean = transaction {
+        val user = UserTable.selectAll()
+            .where { UserTable.id eq id }
+            .singleOrNull()
+            ?.toUser() ?: return@transaction false
+
+        if (user.availableBalance < amount) return@transaction false
+
+        UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.balance] = UserTable.balance - amount
+            it[UserTable.lockedBalance] = UserTable.lockedBalance + amount
+        }
+        true
+    }
+
+    override suspend fun unlockBalance(id: Uuid, amount: Long): Unit = transaction {
+        UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.lockedBalance] = UserTable.lockedBalance - amount
+            it[UserTable.balance] = UserTable.balance + amount
+        }
+    }
+
+    override suspend fun consumeLockedBalance(id: Uuid, amount: Long): Unit = transaction {
+        UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.lockedBalance] = UserTable.lockedBalance - amount
+        }
+    }
 
     private fun ResultRow.toUser() = User(
         id = this[UserTable.id],

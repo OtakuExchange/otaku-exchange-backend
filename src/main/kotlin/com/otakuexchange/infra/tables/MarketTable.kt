@@ -8,7 +8,7 @@ object MarketTable : Table("markets") {
     val eventId = uuid("event_id").references(EventTable.id, onDelete = ReferenceOption.CASCADE).index()
     val entityId = uuid("entity_id").references(EntityTable.id, onDelete = ReferenceOption.SET_NULL).nullable()
     val label = text("label")
-    val status = text("status")
+    val status = text("status").default("OPEN")
 
     override val primaryKey = PrimaryKey(id)
 }

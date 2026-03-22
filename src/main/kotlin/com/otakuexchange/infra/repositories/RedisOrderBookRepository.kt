@@ -12,6 +12,7 @@ import kotlin.uuid.Uuid
 
 class RedisOrderBookRepository : IOrderBookRepository {
 
+    // Key format: orderbook:YES:{marketId} or orderbook:NO:{marketId}
     private fun bookKey(marketId: Uuid, side: OrderSide) =
         "orderbook:${side.name}:$marketId"
 
@@ -20,6 +21,9 @@ class RedisOrderBookRepository : IOrderBookRepository {
     override suspend fun insertOrder(order: Order): Order = withContext(Dispatchers.IO) {
         RedisFactory.pool.getResource().use { jedis ->
             jedis.set(orderKey(order.id), Json.encodeToString(order))
+            // Both YES and NO stored by their own price, descending = best
+            // YES: highest price = most confident YES buyer
+            // NO: highest price = most confident NO buyer (lowest implied YES price)
             jedis.zadd(bookKey(order.marketId, order.side), order.price.toDouble(), order.id.toString())
         }
         order
@@ -29,10 +33,8 @@ class RedisOrderBookRepository : IOrderBookRepository {
         withContext(Dispatchers.IO) {
             RedisFactory.pool.getResource().use { jedis ->
                 val key = bookKey(marketId, side)
-                val ids: List<String> = when (side) {
-                    OrderSide.BUY -> jedis.zrevrange(key, 0, limit.toLong() - 1).toList()
-                    OrderSide.SELL -> jedis.zrange(key, 0, limit.toLong() - 1).toList()
-                }
+                // Both YES and NO: highest price = best match (most willing to pay)
+                val ids: List<String> = jedis.zrevrange(key, 0, limit.toLong() - 1).toList()
                 ids.mapNotNull { id ->
                     jedis.get(orderKey(Uuid.parse(id)))?.let {
                         Json.decodeFromString<Order>(it)

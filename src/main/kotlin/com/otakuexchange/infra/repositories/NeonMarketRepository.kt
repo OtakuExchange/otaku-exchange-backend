@@ -3,6 +3,7 @@ package com.otakuexchange.infra.repositories
 import com.otakuexchange.domain.repositories.IMarketRepository
 import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.market.Market
+import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.MarketWithEntity
 import com.otakuexchange.infra.tables.EntityTable
 import com.otakuexchange.infra.tables.MarketTable
@@ -42,7 +43,7 @@ class NeonMarketRepository : IMarketRepository {
             it[eventId] = market.eventId
             it[entityId] = market.entityId
             it[label] = market.label
-            it[status] = market.status
+            it[status] = market.status.name
         }
         market
     }
@@ -51,9 +52,15 @@ class NeonMarketRepository : IMarketRepository {
         MarketTable.update({ MarketTable.id eq market.id }) {
             it[entityId] = market.entityId
             it[label] = market.label
-            it[status] = market.status
+            it[status] = market.status.name
         }
         market
+    }
+
+    override suspend fun updateStatus(marketId: Uuid, status: MarketStatus): Unit = transaction {
+        MarketTable.update({ MarketTable.id eq marketId }) {
+            it[MarketTable.status] = status.name
+        }
     }
 
     override suspend fun delete(id: Uuid): Boolean = transaction {
@@ -84,6 +91,6 @@ class NeonMarketRepository : IMarketRepository {
         eventId = this[MarketTable.eventId],
         entityId = this[MarketTable.entityId],
         label = this[MarketTable.label],
-        status = this[MarketTable.status]
+        status = MarketStatus.valueOf(this[MarketTable.status])
     )
 }

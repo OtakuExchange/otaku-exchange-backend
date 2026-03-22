@@ -2,7 +2,9 @@ package com.otakuexchange.application.controllers
 
 import com.otakuexchange.domain.event.Event
 import com.otakuexchange.domain.market.Market
+import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.Order
+import com.otakuexchange.domain.market.OrderSide
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IMarketRepository
@@ -32,16 +34,16 @@ class OrderController(
     private val orderMatchingService: OrderMatchingService
 ) : IRouteController {
 
-    // Dev bypass — set DEV_USER_ID in .env to a real user UUID to skip auth
     private val devUserId: String? = runCatching {
         System.getenv("DEV_USER_ID") ?: dotenv()["DEV_USER_ID"]
     }.getOrNull()
 
+    private val seederUserId: Uuid = Uuid.parse(
+        System.getenv("SEEDER_USER_ID") ?: "00000000-0000-0000-0000-000000000001"
+    )
+
     private suspend fun resolveUser(call: io.ktor.server.application.ApplicationCall): User? {
-        // If dev bypass is set, use that user directly
-        if (devUserId != null) {
-            return userRepository.findById(Uuid.parse(devUserId))
-        }
+        if (devUserId != null) return userRepository.findById(Uuid.parse(devUserId))
         val clerkId = call.principal<JWTPrincipal>()?.payload?.subject ?: return null
         return userRepository.findByProviderUserId(clerkId, AuthProvider.CLERK)
     }
@@ -90,8 +92,42 @@ class OrderController(
 
             val order = call.receive<Order>()
 
+            if (order.price !in 1..99) {
+                return@post call.respond(HttpStatusCode.BadRequest, "Price must be between 1 and 99 cents")
+            }
+            if (order.quantity <= 0) {
+                return@post call.respond(HttpStatusCode.BadRequest, "Quantity must be greater than 0")
+            }
+
+            // YES order costs price × qty, NO order costs (100 - price) × qty
+            val cost = when (order.side) {
+                OrderSide.YES -> order.price.toLong() * order.quantity.toLong()
+                OrderSide.NO -> (100L - order.price.toLong()) * order.quantity.toLong()
+            }
+
+            // Lock balance for both YES and NO — skip for seeder
+            if (user.id != seederUserId) {
+                val locked = userRepository.lockBalance(user.id, cost)
+                if (!locked) {
+                    return@post call.respond(
+                        HttpStatusCode.PaymentRequired,
+                        "Insufficient balance. Need ${cost}¢, available ${user.availableBalance}¢"
+                    )
+                }
+            }
+
             val marketWithEntity = marketRepository.getById(order.marketId)
-                ?: return@post call.respond(HttpStatusCode.NotFound, "Market not found")
+                ?: run {
+                    if (user.id != seederUserId) userRepository.unlockBalance(user.id, cost)
+                    return@post call.respond(HttpStatusCode.NotFound, "Market not found")
+                }
+
+            // Check market is open using the status string — compare to enum name
+            if (marketWithEntity.status != MarketStatus.OPEN.name) {
+                if (user.id != seederUserId) userRepository.unlockBalance(user.id, cost)
+                return@post call.respond(HttpStatusCode.Conflict, "Market is not open for trading")
+            }
+
             val eventWithBookmark = eventRepository.getById(marketWithEntity.eventId, user.id)
                 ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
             val topicWithSubtopics = topicRepository.getById(eventWithBookmark.topicId)
@@ -101,7 +137,7 @@ class OrderController(
                 id = marketWithEntity.id,
                 eventId = marketWithEntity.eventId,
                 label = marketWithEntity.label,
-                status = marketWithEntity.status
+                status = MarketStatus.valueOf(marketWithEntity.status)
             )
             val event = Event(
                 id = eventWithBookmark.id,
@@ -113,14 +149,13 @@ class OrderController(
                 status = eventWithBookmark.status,
                 resolutionRule = eventWithBookmark.resolutionRule
             )
-            // Extract base Topic from TopicWithSubtopics
             val topic = Topic(
                 id = topicWithSubtopics.id,
                 topic = topicWithSubtopics.topic,
                 description = topicWithSubtopics.description
             )
 
-            val userOrder = order.copy(userId = user.id)
+            val userOrder = order.copy(userId = user.id, lockedAmount = cost)
             orderMatchingService.submitOrder(userOrder, market, event, topic)
             call.respond(HttpStatusCode.Accepted, userOrder)
         }
