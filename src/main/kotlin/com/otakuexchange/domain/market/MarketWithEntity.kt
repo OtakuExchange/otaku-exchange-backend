@@ -14,5 +14,6 @@ data class MarketWithEntity(
     val label: String,
     val isMatch: Boolean = false,
     val createdAt: Instant = Clock.System.now(),
+    val tradeVolume: Long = 0L,
     val status: String
 )

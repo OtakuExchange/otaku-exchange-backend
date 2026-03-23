@@ -5,6 +5,8 @@ import com.otakuexchange.domain.event.Event
 import com.otakuexchange.domain.event.EventWithBookmark
 import com.otakuexchange.infra.tables.BookmarkTable
 import com.otakuexchange.infra.tables.EventTable
+import com.otakuexchange.infra.tables.MarketTable
+import com.otakuexchange.infra.tables.TradeHistoryTable
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -19,15 +21,18 @@ class NeonEventRepository : IEventRepository {
         val events = EventTable.selectAll()
             .where { EventTable.topicId eq topicId }
             .map { it.toEvent() }
-        events.map { it.withBookmark(currentUserId) }
+        val eventIds = events.map { it.id }
+        val volumeByEvent = calcVolumeByEvent(eventIds)
+        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
     }
 
     override suspend fun getById(id: Uuid, currentUserId: Uuid?): EventWithBookmark? = transaction {
-        EventTable.selectAll()
+        val event = EventTable.selectAll()
             .where { EventTable.id eq id }
             .singleOrNull()
-            ?.toEvent()
-            ?.withBookmark(currentUserId)
+            ?.toEvent() ?: return@transaction null
+        val volume = calcVolumeByEvent(listOf(id))[id] ?: 0L
+        event.withBookmark(currentUserId, volume)
     }
 
     override suspend fun save(event: Event): Event = transaction {
@@ -81,7 +86,29 @@ class NeonEventRepository : IEventRepository {
         createdAt      = this[EventTable.createdAt]
     )
 
-    private fun Event.withBookmark(currentUserId: Uuid?): EventWithBookmark {
+    private fun calcVolumeByEvent(eventIds: List<Uuid>): Map<Uuid, Long> {
+        if (eventIds.isEmpty()) return emptyMap()
+        val marketsByEvent = MarketTable.selectAll()
+            .where { MarketTable.eventId inList eventIds }
+            .groupBy({ it[MarketTable.eventId] }, { it[MarketTable.id] })
+
+        val allMarketIds = marketsByEvent.values.flatten()
+        if (allMarketIds.isEmpty()) return emptyMap()
+
+        val tradesByMarket = TradeHistoryTable.selectAll()
+            .where { TradeHistoryTable.marketId inList allMarketIds }
+            .groupBy { it[TradeHistoryTable.marketId] }
+
+        return marketsByEvent.mapValues { (_, marketIds) ->
+            marketIds.sumOf { marketId ->
+                tradesByMarket[marketId]?.sumOf {
+                    it[TradeHistoryTable.escrowPerContract].toLong() * it[TradeHistoryTable.quantity].toLong()
+                } ?: 0L
+            }
+        }
+    }
+
+    private fun Event.withBookmark(currentUserId: Uuid?, tradeVolume: Long = 0L): EventWithBookmark {
         val bookmarked = if (currentUserId != null) {
             BookmarkTable.selectAll()
                 .where { (BookmarkTable.eventId eq id) and (BookmarkTable.userId eq currentUserId) }
@@ -100,6 +127,7 @@ class NeonEventRepository : IEventRepository {
             logoPath       = logoPath,
             pandaScoreId   = pandaScoreId,
             createdAt      = createdAt,
+            tradeVolume    = tradeVolume,
             bookmarked     = bookmarked
         )
     }

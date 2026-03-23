@@ -7,10 +7,11 @@ import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.MarketWithEntity
 import com.otakuexchange.infra.tables.EntityTable
 import com.otakuexchange.infra.tables.MarketTable
+import com.otakuexchange.infra.tables.TradeHistoryTable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.alias
-import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -28,18 +29,23 @@ class NeonMarketRepository : IMarketRepository {
             .join(RelatedEntityTable, JoinType.LEFT, MarketTable.relatedEntityId, RelatedEntityTable[EntityTable.id])
 
     override suspend fun getMarketsByEventId(eventId: Uuid): List<MarketWithEntity> = transaction {
-        marketWithEntityQuery
+        val markets = marketWithEntityQuery
             .selectAll()
             .where { MarketTable.eventId eq eventId }
             .map { it.toMarketWithEntity() }
+        val marketIds = markets.map { it.id }
+        val volumeByMarket = calcVolumeByMarket(marketIds)
+        markets.map { it.copy(tradeVolume = volumeByMarket[it.id] ?: 0L) }
     }
 
     override suspend fun getById(id: Uuid): MarketWithEntity? = transaction {
-        marketWithEntityQuery
+        val market = marketWithEntityQuery
             .selectAll()
             .where { MarketTable.id eq id }
             .singleOrNull()
-            ?.toMarketWithEntity()
+            ?.toMarketWithEntity() ?: return@transaction null
+        val volume = calcVolumeByMarket(listOf(id))[id] ?: 0L
+        market.copy(tradeVolume = volume)
     }
 
     override suspend fun save(market: Market): Market = transaction {
@@ -75,6 +81,20 @@ class NeonMarketRepository : IMarketRepository {
 
     override suspend fun delete(id: Uuid): Boolean = transaction {
         MarketTable.deleteWhere { MarketTable.id eq id } > 0
+    }
+
+    // ── Volume ────────────────────────────────────────────────────────────────
+
+    private fun calcVolumeByMarket(marketIds: List<Uuid>): Map<Uuid, Long> {
+        if (marketIds.isEmpty()) return emptyMap()
+        return TradeHistoryTable.selectAll()
+            .where { TradeHistoryTable.marketId inList marketIds }
+            .groupBy { it[TradeHistoryTable.marketId] }
+            .mapValues { (_, trades) ->
+                trades.sumOf {
+                    it[TradeHistoryTable.escrowPerContract].toLong() * it[TradeHistoryTable.quantity].toLong()
+                }
+            }
     }
 
     // ── Row mappers ───────────────────────────────────────────────────────────

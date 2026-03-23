@@ -6,12 +6,12 @@ import org.jetbrains.exposed.v1.datetime.timestamp
 
 object OrderRecordTable : Table("order_records") {
     val id = uuid("id")
-    val userId = uuid("user_id").references(UserTable.id, onDelete = ReferenceOption.RESTRICT).index()
-    val marketId = uuid("market_id").references(MarketTable.id, onDelete = ReferenceOption.RESTRICT).index()
+    val userId = uuid("user_id").references(UserTable.id, onDelete = ReferenceOption.CASCADE).index()
+    val marketId = uuid("market_id").references(MarketTable.id, onDelete = ReferenceOption.CASCADE).index()
     val marketLabel = text("market_label")
-    val eventId = uuid("event_id").references(EventTable.id, onDelete = ReferenceOption.RESTRICT).index()
+    val eventId = uuid("event_id").references(EventTable.id, onDelete = ReferenceOption.CASCADE).index()
     val eventName = text("event_name")
-    val topicId = uuid("topic_id").references(TopicTable.id, onDelete = ReferenceOption.RESTRICT).index()
+    val topicId = uuid("topic_id").references(TopicTable.id, onDelete = ReferenceOption.CASCADE).index()
     val topicName = text("topic_name")
     val side = text("side")
     val price = integer("price")

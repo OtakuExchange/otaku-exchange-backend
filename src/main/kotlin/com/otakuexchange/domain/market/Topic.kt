@@ -7,5 +7,5 @@ import kotlin.uuid.Uuid
 data class Topic(
     val id: Uuid = Uuid.random(),
     val topic: String,
-    val description: String
+    val description: String? = null
 )

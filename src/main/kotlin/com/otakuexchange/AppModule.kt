@@ -66,7 +66,7 @@ val appModule = module {
     single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get()) }
     single<IRouteController>(named("subtopicController")) { SubtopicController(get(), get()) }
     single<IRouteController>(named("authController")) { AuthController(get()) }
-    single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get()) }
+    single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<IRouteController>(named("rankController")) { RankController(get()) }
     single<IRouteController>(named("adminController")) { AdminController(get(), get(), get(), get()) }
 }

@@ -10,6 +10,7 @@ import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IMarketRepository
 import com.otakuexchange.domain.repositories.IOrderRecordRepository
+import com.otakuexchange.domain.repositories.IPositionRepository
 import com.otakuexchange.domain.repositories.ITopicRepository
 import com.otakuexchange.domain.repositories.ITradeHistoryRepository
 import com.otakuexchange.domain.repositories.IUserRepository
@@ -32,6 +33,7 @@ class OrderController(
     private val eventRepository: IEventRepository,
     private val topicRepository: ITopicRepository,
     private val userRepository: IUserRepository,
+    private val positionRepository: IPositionRepository,
     private val orderMatchingService: OrderMatchingService
 ) : IRouteController {
 
@@ -56,6 +58,21 @@ class OrderController(
                 ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
             val orders = orderRecordRepository.findByUserId(user.id)
             call.respond(orders)
+        }
+
+        route.get("/positions/me") {
+            val user = resolveUser(call)
+                ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val positions = positionRepository.getPositionsByUser(user.id)
+            call.respond(positions)
+        }
+
+        route.get("/positions/me/total") {
+            val user = resolveUser(call)
+                ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val positions = positionRepository.getPositionsByUser(user.id)
+            val total = positions.sumOf { it.avgPrice.toLong() * it.quantity.toLong() }
+            call.respond(mapOf("total" to total))
         }
 
         route.get("/orders/{id}") {
