@@ -20,14 +20,25 @@ class RedisOrderBookRepository : IOrderBookRepository {
 
     override suspend fun insertOrder(order: Order): Order = withContext(Dispatchers.IO) {
         RedisFactory.pool.getResource().use { jedis ->
+
+            // Encode price-time priority into score
+            val scale = 1_000_000_000L
+            val createdAtMillis = order.createdAt.toEpochMilliseconds()
+            val score = (order.price.toLong() * scale - createdAtMillis).toDouble()
+
+            // Store full order object
             jedis.set(orderKey(order.id), Json.encodeToString(order))
-            // Both YES and NO stored by their own price, descending = best
-            // YES: highest price = most confident YES buyer
-            // NO: highest price = most confident NO buyer (lowest implied YES price)
-            jedis.zadd(bookKey(order.marketId, order.side), order.price.toDouble(), order.id.toString())
+
+            // Insert into sorted set with composite score
+            jedis.zadd(
+                bookKey(order.marketId, order.side),
+                score,
+                order.id.toString()
+            )
         }
         order
     }
+
 
     override suspend fun getBestOrders(marketId: Uuid, side: OrderSide, limit: Int): List<Order> =
         withContext(Dispatchers.IO) {
@@ -42,6 +53,25 @@ class RedisOrderBookRepository : IOrderBookRepository {
                 }
             }
         }
+
+    override suspend fun getBestOrdersPaged(
+        marketId: Uuid,
+        side: OrderSide,
+        offset: Long,
+        limit: Int
+    ): List<Order> = withContext(Dispatchers.IO) {
+        RedisFactory.pool.getResource().use { jedis ->
+            val key = bookKey(marketId, side)
+
+            val ids = jedis.zrevrange(key, offset, offset + limit - 1).toList()
+
+            ids.mapNotNull { id ->
+                jedis.get(orderKey(Uuid.parse(id)))?.let {
+                    Json.decodeFromString<Order>(it)
+                }
+            }
+        }
+    }
 
     override suspend fun removeOrder(order: Order): Unit = withContext(Dispatchers.IO) {
         RedisFactory.pool.getResource().use { jedis ->

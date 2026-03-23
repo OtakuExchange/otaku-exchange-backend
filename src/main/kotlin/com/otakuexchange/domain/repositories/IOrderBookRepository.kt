@@ -5,9 +5,32 @@ import com.otakuexchange.domain.market.OrderSide
 import kotlin.uuid.Uuid
 
 interface IOrderBookRepository {
+
     suspend fun insertOrder(order: Order): Order
-    suspend fun getBestOrders(marketId: Uuid, side: OrderSide, limit: Int = 10): List<Order>
+
+    /**
+     * Used by matching engine (core logic)
+     * Fetches orders in price-time priority with pagination
+     */
+    suspend fun getBestOrdersPaged(
+        marketId: Uuid,
+        side: OrderSide,
+        offset: Long,
+        limit: Int
+    ): List<Order>
+
+    /**
+     * Used for UI / simple reads (top of book)
+     */
+    suspend fun getBestOrders(
+        marketId: Uuid,
+        side: OrderSide,
+        limit: Int = 10
+    ): List<Order>
+
     suspend fun removeOrder(order: Order)
+
     suspend fun updateRemaining(order: Order)
+
     suspend fun getOrder(orderId: Uuid): Order?
 }

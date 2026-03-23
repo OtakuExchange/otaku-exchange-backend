@@ -100,16 +100,41 @@ class OrderMatchingService(
     private suspend fun matchLimitOrder(incoming: Order) {
         val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
         var remaining = incoming.remaining
-        val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide)
 
-        for (candidate in candidates) {
-            if (remaining <= 0) break
-            val pricesCross = incoming.price + candidate.price >= 100
-            if (!pricesCross) break
+        var offset = 0L
+        val pageSize = 50
 
-            val fillQty = minOf(remaining, candidate.remaining)
-            remaining -= fillQty
-            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+        while (remaining > 0) {
+            val candidates = orderBookRepository.getBestOrdersPaged(
+                incoming.marketId,
+                oppositeSide,
+                offset,
+                pageSize
+            )
+
+            if (candidates.isEmpty()) break
+
+            for (candidate in candidates) {
+                if (remaining <= 0) break
+
+                // 🚫 self-trade prevention
+                if (candidate.userId == incoming.userId) continue
+
+                val pricesCross = incoming.price + candidate.price >= 100
+                if (!pricesCross) {
+                    // nothing deeper will match
+                    remaining = incoming.remaining - (incoming.remaining - remaining)
+                    break
+                }
+
+                val fillQty = minOf(remaining, candidate.remaining)
+                remaining -= fillQty
+
+                executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+            }
+
+            // move to next page
+            offset += pageSize
         }
 
         val now = Clock.System.now()
@@ -129,24 +154,45 @@ class OrderMatchingService(
         }
     }
 
+
     private suspend fun matchMarketOrder(incoming: Order) {
         val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
         var remaining = incoming.remaining
-        val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide, limit = 50)
 
-        for (candidate in candidates) {
-            if (remaining <= 0) break
-            val fillQty = minOf(remaining, candidate.remaining)
-            remaining -= fillQty
-            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+        var offset = 0L
+        val pageSize = 50
+
+        while (remaining > 0) {
+            val candidates = orderBookRepository.getBestOrdersPaged(
+                incoming.marketId,
+                oppositeSide,
+                offset,
+                pageSize
+            )
+
+            if (candidates.isEmpty()) break
+
+            for (candidate in candidates) {
+                if (remaining <= 0) break
+
+                if (candidate.userId == incoming.userId) continue
+
+                val fillQty = minOf(remaining, candidate.remaining)
+                remaining -= fillQty
+
+                executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+            }
+
+            offset += pageSize
         }
 
         val now = Clock.System.now()
         val finalStatus = if (remaining <= 0) OrderStatus.FULFILLED else OrderStatus.CANCELLED
+
         coroutineScope {
             launch(Dispatchers.IO) { orderBookRepository.removeOrder(incoming.copy(remaining = remaining)) }
             launch(Dispatchers.IO) { updateRecord(incoming.id, remaining, finalStatus, now) }
-            // Refund unmatched portion
+
             if (remaining > 0 && incoming.userId != seederUserId) {
                 launch(Dispatchers.IO) {
                     val refund = 99L * remaining.toLong()
@@ -160,45 +206,55 @@ class OrderMatchingService(
         val oppositeSide = if (incoming.side == OrderSide.YES) OrderSide.NO else OrderSide.YES
         var budgetRemaining = incoming.notionalAmount ?: return
         var totalFilled = 0
-        val maxPriceCap = incoming.price  // user-set cap, 99 = no cap
+        val maxPriceCap = incoming.price
 
-        val candidates = orderBookRepository.getBestOrders(incoming.marketId, oppositeSide, limit = 50)
+        var offset = 0L
+        val pageSize = 50
 
-        for (candidate in candidates) {
-            if (budgetRemaining <= 0) break
+        while (budgetRemaining > 0) {
+            val candidates = orderBookRepository.getBestOrdersPaged(
+                incoming.marketId,
+                oppositeSide,
+                offset,
+                pageSize
+            )
 
-            // Execution price for incoming side
-            val incomingExecPrice = if (incoming.side == OrderSide.YES) {
-                100 - candidate.price  // YES cost = 100 - NO resting price
-            } else {
-                100 - candidate.price  // NO cost = 100 - YES resting price
+            if (candidates.isEmpty()) break
+
+            for (candidate in candidates) {
+                if (budgetRemaining <= 0) break
+
+                if (candidate.userId == incoming.userId) continue
+
+                val incomingExecPrice = 100 - candidate.price
+
+                if (incomingExecPrice > maxPriceCap) {
+                    budgetRemaining = 0
+                    break
+                }
+
+                val maxAffordable = (budgetRemaining / incomingExecPrice.toLong()).toInt()
+                if (maxAffordable <= 0) break
+
+                val fillQty = minOf(maxAffordable, candidate.remaining)
+                val fillCost = fillQty.toLong() * incomingExecPrice.toLong()
+
+                budgetRemaining -= fillCost
+                totalFilled += fillQty
+
+                executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
             }
 
-            // Check price cap
-            if (incomingExecPrice > maxPriceCap) break
-
-            // How many contracts can we buy with remaining budget at this price?
-            val maxAffordable = (budgetRemaining / incomingExecPrice.toLong()).toInt()
-            if (maxAffordable <= 0) break
-
-            val fillQty = minOf(maxAffordable, candidate.remaining)
-            val fillCost = fillQty.toLong() * incomingExecPrice.toLong()
-
-            budgetRemaining -= fillCost
-            totalFilled += fillQty
-
-            executeFill(incoming, candidate, fillQty, isIncomingYes = incoming.side == OrderSide.YES)
+            offset += pageSize
         }
 
         val now = Clock.System.now()
         val finalStatus = if (totalFilled > 0) OrderStatus.FULFILLED else OrderStatus.CANCELLED
 
-        // Refund unspent budget
         if (budgetRemaining > 0 && incoming.userId != seederUserId) {
             userRepository.unlockBalance(incoming.userId, budgetRemaining)
         }
 
-        // NOTIONAL orders never rest — always terminal
         updateRecord(incoming.id, 0, finalStatus, now)
     }
 
