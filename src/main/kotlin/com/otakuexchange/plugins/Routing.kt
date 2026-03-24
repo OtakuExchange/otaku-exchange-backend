@@ -8,6 +8,7 @@ import io.ktor.server.auth.*
 import org.koin.ktor.ext.get
 import com.otakuexchange.application.controllers.IRouteController
 import org.koin.core.qualifier.named
+import io.ktor.http.*
 import io.ktor.server.response.*
 
 fun Application.configureRouting() {
@@ -21,10 +22,15 @@ fun Application.configureRouting() {
     val marketController   = get<IRouteController>(named("marketController"))
     val eventController    = get<IRouteController>(named("eventController"))
     val subtopicController = get<IRouteController>(named("subtopicController"))
-    val orderController   = get<IRouteController>(named("orderController"))
+    val orderController    = get<IRouteController>(named("orderController"))
     val rankController     = get<IRouteController>(named("rankController"))
 
     routing {
+        // Handle CORS preflight for all routes
+        options("{...}") {
+            call.respond(HttpStatusCode.OK)
+        }
+
         get("/health") {
             call.respondText("ok")
         }

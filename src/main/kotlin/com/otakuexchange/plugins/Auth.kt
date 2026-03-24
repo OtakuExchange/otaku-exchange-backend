@@ -29,13 +29,24 @@ fun Application.configureAuth() {
     install(Authentication) {
         jwt("clerk") {
             authHeader { call ->
-                val token = call.request.headers[HttpHeaders.Cookie]
+                // 1. Try Authorization: Bearer <token> header first (works through Cloudflare)
+                val bearerToken = call.request.headers[HttpHeaders.Authorization]
+                    ?.takeIf { it.startsWith("Bearer ") }
+                    ?.removePrefix("Bearer ")
+
+                if (bearerToken != null) {
+                    return@authHeader HttpAuthHeader.Single("Bearer", bearerToken)
+                }
+
+                // 2. Fall back to __session cookie (local dev)
+                val cookieToken = call.request.headers[HttpHeaders.Cookie]
                     ?.split(";")
                     ?.map { it.trim() }
                     ?.firstOrNull { it.startsWith("__session=") }
                     ?.removePrefix("__session=")
                     ?: return@authHeader null
-                HttpAuthHeader.Single("Bearer", token)
+
+                HttpAuthHeader.Single("Bearer", cookieToken)
             }
             verifier { header ->
                 val token = (header as? HttpAuthHeader.Single)?.blob
@@ -49,7 +60,7 @@ fun Application.configureAuth() {
                     val verifier = JWT.require(Algorithm.RSA256(jwk.publicKey as RSAPublicKey, null))
                         .acceptLeeway(10)
                         .build()
-                    verifier.verify(token) // verify eagerly so we can catch and log the real error
+                    verifier.verify(token)
                     verifier
                 } catch (e: Exception) {
                     authLogger.warn("Clerk JWT rejected: ${e.javaClass.simpleName}: ${e.message}")
@@ -74,6 +85,5 @@ fun Application.configureAuth() {
 val ApplicationCall.userId: String
     get() = principal<JWTPrincipal>()!!.payload.subject
 
-// Clerk-specific: the JWT subject is the Clerk user ID (e.g. "user_2abc...")
 val ApplicationCall.clerkUserId: String
     get() = userId
