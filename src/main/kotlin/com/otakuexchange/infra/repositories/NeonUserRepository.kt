@@ -89,7 +89,6 @@ class NeonUserRepository : IUserRepository {
         if (user.availableBalance < amount) return@transaction false
 
         UserTable.update({ UserTable.id eq id }) {
-            it[UserTable.balance] = UserTable.balance - amount
             it[UserTable.lockedBalance] = UserTable.lockedBalance + amount
         }
         true
@@ -98,12 +97,12 @@ class NeonUserRepository : IUserRepository {
     override suspend fun unlockBalance(id: Uuid, amount: Long): Unit = transaction {
         UserTable.update({ UserTable.id eq id }) {
             it[UserTable.lockedBalance] = UserTable.lockedBalance - amount
-            it[UserTable.balance] = UserTable.balance + amount
         }
     }
 
     override suspend fun consumeLockedBalance(id: Uuid, amount: Long): Unit = transaction {
         UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.balance] = UserTable.balance - amount
             it[UserTable.lockedBalance] = UserTable.lockedBalance - amount
         }
     }
