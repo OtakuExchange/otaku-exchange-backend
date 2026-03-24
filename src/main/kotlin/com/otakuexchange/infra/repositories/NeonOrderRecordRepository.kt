@@ -43,6 +43,7 @@ class NeonOrderRecordRepository : IOrderRecordRepository {
 
     override suspend fun update(record: OrderRecord): OrderRecord = transaction {
         OrderRecordTable.update({ OrderRecordTable.id eq record.id }) {
+            it[quantity] = record.quantity
             it[remaining] = record.remaining
             it[status] = record.status.name
             it[updatedAt] = record.updatedAt

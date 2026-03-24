@@ -72,14 +72,36 @@ class OrderMatchingService(
     suspend fun cancelOrder(orderId: Uuid) {
         val order = orderBookRepository.getOrder(orderId) ?: return
         val record = orderRecordRepository.findById(orderId) ?: return
+        val now = Clock.System.now()
+        val filledQty = record.quantity - order.remaining
+
         coroutineScope {
             launch(Dispatchers.IO) { orderBookRepository.removeOrder(order) }
+
+            // Update the existing record to represent only the cancelled (unfilled) portion
             launch(Dispatchers.IO) {
                 orderRecordRepository.update(record.copy(
+                    quantity = order.remaining,
+                    remaining = order.remaining,
                     status = OrderStatus.CANCELLED,
-                    updatedAt = Clock.System.now()
+                    updatedAt = now
                 ))
             }
+
+            // If partially filled, create a separate FULFILLED record for the filled portion
+            if (filledQty > 0) {
+                launch(Dispatchers.IO) {
+                    orderRecordRepository.save(record.copy(
+                        id = Uuid.random(),
+                        quantity = filledQty,
+                        remaining = 0,
+                        status = OrderStatus.FULFILLED,
+                        createdAt = now,
+                        updatedAt = now
+                    ))
+                }
+            }
+
             if (order.userId != seederUserId) {
                 launch(Dispatchers.IO) {
                     val refund = order.lockedAmount * order.remaining / order.quantity
