@@ -142,10 +142,7 @@ class OrderController(
             // MARKET:   lock price × quantity (worst case, refunded if fills cheaper)
             // NOTIONAL: lock the full notional budget
             val cost: Long = when (order.orderType) {
-                OrderType.LIMIT -> when (order.side) {
-                    OrderSide.YES -> order.price.toLong() * order.quantity.toLong()
-                    OrderSide.NO -> (100L - order.price.toLong()) * order.quantity.toLong()
-                }
+                OrderType.LIMIT -> order.price.toLong() * order.quantity.toLong()
                 OrderType.MARKET -> when (order.side) {
                     OrderSide.YES -> 99L * order.quantity.toLong() // worst case YES = 99¢
                     OrderSide.NO -> 99L * order.quantity.toLong()  // worst case NO = 99¢
