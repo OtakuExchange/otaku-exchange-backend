@@ -2,8 +2,12 @@ package com.otakuexchange.application.controllers
 
 import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.market.Market
+import com.otakuexchange.domain.market.MarketWithEntity
+import com.otakuexchange.domain.market.OrderSide
 import com.otakuexchange.domain.repositories.IEntityRepository
 import com.otakuexchange.domain.repositories.IMarketRepository
+import com.otakuexchange.domain.repositories.IOrderBookRepository
+import com.otakuexchange.domain.repositories.ITradeHistoryRepository
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -12,8 +16,37 @@ import kotlin.uuid.Uuid
 
 class MarketController(
     private val marketRepository: IMarketRepository,
-    private val entityRepository: IEntityRepository
+    private val entityRepository: IEntityRepository,
+    private val orderBookRepository: IOrderBookRepository,
+    private val tradeHistoryRepository: ITradeHistoryRepository
 ) : IRouteController {
+
+    private suspend fun MarketWithEntity.withForecast(): MarketWithEntity {
+        val bestYes = orderBookRepository.getBestOrders(id, OrderSide.YES, 1).firstOrNull()
+        val bestNo  = orderBookRepository.getBestOrders(id, OrderSide.NO,  1).firstOrNull()
+        val yesBid    = bestYes?.price
+        val noImplied = bestNo?.price?.let { 100 - it }
+
+        val forecast: Double? = when {
+            // Both sides present → mid-market
+            yesBid != null && noImplied != null -> (yesBid + noImplied) / 2.0
+
+            // One or both sides missing → fall back to last traded price
+            else -> {
+                val lastTraded = tradeHistoryRepository.getLastTradedPrice(id)
+                when {
+                    lastTraded != null -> lastTraded.toDouble()
+
+                    // No trades → use worst (most conservative) resting order on available side
+                    yesBid != null -> orderBookRepository.getWorstOrder(id, OrderSide.YES)?.price?.toDouble()
+                    noImplied != null -> orderBookRepository.getWorstOrder(id, OrderSide.NO)?.price?.let { (100 - it).toDouble() }
+                    else -> null
+                }
+            }
+        }
+
+        return copy(forecast = forecast)
+    }
 
     override fun registerRoutes(route: Route) {
 
@@ -24,7 +57,7 @@ class MarketController(
                 call.respond(HttpStatusCode.BadRequest, "Invalid eventId")
                 return@get
             }
-            val markets = marketRepository.getMarketsByEventId(eventId)
+            val markets = marketRepository.getMarketsByEventId(eventId).map { it.withForecast() }
             call.respond(markets)
         }
 
@@ -37,7 +70,19 @@ class MarketController(
             }
             val market = marketRepository.getById(id)
             if (market == null) call.respond(HttpStatusCode.NotFound, "Market not found")
-            else call.respond(market)
+            else call.respond(market.withForecast())
+        }
+
+        route.get("/markets/{id}/forecast") {
+            val id = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@get
+            }
+            val market = marketRepository.getById(id)
+            if (market == null) { call.respond(HttpStatusCode.NotFound, "Market not found"); return@get }
+            call.respond(mapOf("forecast" to market.withForecast().forecast))
         }
 
         route.get("/entities") {

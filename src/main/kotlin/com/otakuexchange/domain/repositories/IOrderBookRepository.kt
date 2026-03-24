@@ -33,4 +33,10 @@ interface IOrderBookRepository {
     suspend fun updateRemaining(order: Order)
 
     suspend fun getOrder(orderId: Uuid): Order?
+
+    /**
+     * Returns the lowest-priority (worst-priced) resting order for a side.
+     * Used as a conservative fallback forecast when only one side has orders.
+     */
+    suspend fun getWorstOrder(marketId: Uuid, side: OrderSide): Order?
 }

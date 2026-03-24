@@ -62,7 +62,7 @@ val appModule = module {
 
     // Controllers
     single<IRouteController>(named("topicController")) { TopicController(get()) }
-    single<IRouteController>(named("marketController")) { MarketController(get(), get()) }
+    single<IRouteController>(named("marketController")) { MarketController(get(), get(), get(), get()) }
     single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get()) }
     single<IRouteController>(named("subtopicController")) { SubtopicController(get(), get()) }
     single<IRouteController>(named("authController")) { AuthController(get()) }

@@ -93,4 +93,13 @@ class RedisOrderBookRepository : IOrderBookRepository {
             }
         }
     }
+
+    override suspend fun getWorstOrder(marketId: Uuid, side: OrderSide): Order? = withContext(Dispatchers.IO) {
+        RedisFactory.pool.getResource().use { jedis ->
+            val id = jedis.zrange(bookKey(marketId, side), 0, 0).firstOrNull() ?: return@withContext null
+            jedis.get(orderKey(Uuid.parse(id)))?.let {
+                Json.decodeFromString<Order>(it)
+            }
+        }
+    }
 }
