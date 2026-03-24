@@ -5,6 +5,7 @@ import com.otakuexchange.domain.market.Market
 import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.Order
 import com.otakuexchange.domain.market.OrderSide
+import com.otakuexchange.domain.market.OrderStatus
 import com.otakuexchange.domain.market.OrderType
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.IEventRepository
@@ -56,7 +57,13 @@ class OrderController(
         route.get("/orders/me") {
             val user = resolveUser(call)
                 ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
-            val orders = orderRecordRepository.findByUserId(user.id)
+            val status = call.request.queryParameters["status"]?.let {
+                runCatching { OrderStatus.valueOf(it.uppercase()) }.getOrNull()
+            }
+            val orderType = call.request.queryParameters["orderType"]?.let {
+                runCatching { OrderType.valueOf(it.uppercase()) }.getOrNull()
+            }
+            val orders = orderRecordRepository.findByUserId(user.id, status, orderType)
             call.respond(orders)
         }
 

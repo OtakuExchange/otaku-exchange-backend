@@ -7,6 +7,7 @@ import com.otakuexchange.domain.market.OrderType
 import com.otakuexchange.domain.repositories.IOrderRecordRepository
 import com.otakuexchange.infra.tables.OrderRecordTable
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -56,9 +57,14 @@ class NeonOrderRecordRepository : IOrderRecordRepository {
             ?.toOrderRecord()
     }
 
-    override suspend fun findByUserId(userId: Uuid): List<OrderRecord> = transaction {
+    override suspend fun findByUserId(userId: Uuid, status: OrderStatus?, orderType: OrderType?): List<OrderRecord> = transaction {
         OrderRecordTable.selectAll()
-            .where { OrderRecordTable.userId eq userId }
+            .where {
+                var cond = OrderRecordTable.userId eq userId
+                if (status != null) cond = cond and (OrderRecordTable.status eq status.name)
+                if (orderType != null) cond = cond and (OrderRecordTable.orderType eq orderType.name)
+                cond
+            }
             .map { it.toOrderRecord() }
     }
 
