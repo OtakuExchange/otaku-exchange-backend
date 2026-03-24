@@ -16,13 +16,12 @@ fun main(args: Array<String>) {
 fun Application.module() {
     DatabaseFactory.init()
     RedisFactory.init()
-
     install(Koin) {
         slf4jLogger()
         modules(appModule)
     }
-
     configureExceptionHandling()
     configureAuth()
+    configureCors()
     configureRouting()
 }
