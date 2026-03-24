@@ -298,8 +298,7 @@ class OrderMatchingService(
             if (yesOrder.userId != seederUserId) {
                 launch(Dispatchers.IO) {
                     val yesActualCost = yesExecPrice.toLong() * fillQty.toLong()
-                    val yesLockedPerContract = if (yesOrder.id == incoming.id) incoming.price.toLong()
-                                               else candidate.price.toLong()
+                    val yesLockedPerContract = yesOrder.lockedAmount / yesOrder.quantity
                     val yesSurplus = (yesLockedPerContract * fillQty) - yesActualCost
                     userRepository.consumeLockedBalance(yesOrder.userId, yesActualCost)
                     if (yesSurplus > 0) userRepository.unlockBalance(yesOrder.userId, yesSurplus)
@@ -310,8 +309,7 @@ class OrderMatchingService(
             if (noOrder.userId != seederUserId) {
                 launch(Dispatchers.IO) {
                     val noActualCost = noExecPrice.toLong() * fillQty.toLong()
-                    val noLockedPerContract = if (noOrder.id == incoming.id) incoming.price.toLong()
-                                              else candidate.price.toLong()
+                    val noLockedPerContract = noOrder.lockedAmount / noOrder.quantity
                     val noSurplus = (noLockedPerContract * fillQty) - noActualCost
                     userRepository.consumeLockedBalance(noOrder.userId, noActualCost)
                     if (noSurplus > 0) userRepository.unlockBalance(noOrder.userId, noSurplus)

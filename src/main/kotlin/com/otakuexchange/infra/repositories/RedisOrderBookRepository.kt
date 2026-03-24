@@ -21,10 +21,11 @@ class RedisOrderBookRepository : IOrderBookRepository {
     override suspend fun insertOrder(order: Order): Order = withContext(Dispatchers.IO) {
         RedisFactory.pool.getResource().use { jedis ->
 
-            // Encode price-time priority into score
-            val scale = 1_000_000_000L
-            val createdAtMillis = order.createdAt.toEpochMilliseconds()
-            val score = (order.price.toLong() * scale - createdAtMillis).toDouble()
+            // Price is the integer part (dominates), time is the fractional part (tie-break).
+            // Earlier timestamp = higher fraction so it sorts above later orders at the same price.
+            val MAX_MS = 9_999_999_999_999.0
+            val timeFraction = 1.0 - (order.createdAt.toEpochMilliseconds() / MAX_MS)
+            val score = order.price + timeFraction
 
             // Store full order object
             jedis.set(orderKey(order.id), Json.encodeToString(order))
