@@ -20,6 +20,9 @@ fun Application.module() {
         slf4jLogger()
         modules(appModule)
     }
+    install(CORS) {
+        anyHost()
+    }
     configureExceptionHandling()
     configureAuth()
     configureCors()
