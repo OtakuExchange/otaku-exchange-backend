@@ -17,10 +17,10 @@ private const val STARTING_BALANCE = 50000L       // $500 in cents
 private const val DAILY_REWARD = 2000L            // $20 in cents
 private const val DAILY_REWARD_TTL = 86400L        // 24 hours in seconds
 
-fun Route.syncClerkUser() {
-    intercept(ApplicationCallPipeline.Call) {
-        val principal = call.principal<JWTPrincipal>() ?: return@intercept
-        val clerkId = principal.payload.subject ?: return@intercept
+val ClerkUserSyncPlugin = createRouteScopedPlugin("ClerkUserSyncPlugin") {
+    onCall { call ->
+        val principal = call.principal<JWTPrincipal>() ?: return@onCall
+        val clerkId = principal.payload.subject ?: return@onCall
         val userRepository = call.application.get<IUserRepository>()
 
         try {
@@ -62,11 +62,15 @@ fun Route.syncClerkUser() {
                     RedisFactory.pool.getResource().use { jedis ->
                         jedis.setex(rewardKey, DAILY_REWARD_TTL, "1")
                     }
-                    syncLogger.info("Daily reward of $${ DAILY_REWARD / 100 } awarded to user ${existingUser.id}")
+                    syncLogger.info("Daily reward of $${DAILY_REWARD / 100} awarded to user ${existingUser.id}")
                 }
             }
         } catch (e: Exception) {
             syncLogger.error("Failed to sync Clerk user $clerkId: ${e.javaClass.simpleName}: ${e.message}", e)
         }
     }
+}
+
+fun Route.syncClerkUser() {
+    install(ClerkUserSyncPlugin)
 }

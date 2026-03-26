@@ -10,4 +10,5 @@ interface IEventRepository {
     suspend fun save(event: Event): Event
     suspend fun update(event: Event): Event
     suspend fun delete(id: Uuid): Boolean
+    suspend fun closeStaking(id: Uuid): Boolean
 }

@@ -38,6 +38,14 @@ import com.otakuexchange.application.controllers.OrderController
 import com.otakuexchange.application.controllers.SubtopicController
 import com.otakuexchange.application.controllers.RankController
 import com.otakuexchange.application.controllers.AdminController
+
+import com.otakuexchange.infra.repositories.parimutuel.NeonMarketPoolRepository
+import com.otakuexchange.infra.repositories.parimutuel.NeonStakeRepository
+import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
+import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
+import com.otakuexchange.application.controllers.ParimutuelController
+import com.otakuexchange.domain.services.ParimutuelService
+
 import org.koin.core.qualifier.named
 
 val appModule = module {
@@ -56,9 +64,21 @@ val appModule = module {
     single<IRankRepository> { NeonRankRepository() }
     single<IPositionRepository> { NeonPositionRepository() }
 
+    // Parimutuel repositories
+    single<IMarketPoolRepository>  { NeonMarketPoolRepository() }
+    single<IStakeRepository>       { NeonStakeRepository() }
+
     // Services
     single { OrderMatchingService(get(), get(), get(), get(), get()) }
     single { MarketSeederService(get(), get()) }
+    single {
+        ParimutuelService(
+            stakeRepository       = get(),
+            marketPoolRepository  = get(),
+            eventRepository       = get(),
+            userRepository        = get()
+        )
+    }
 
     // Controllers
     single<IRouteController>(named("topicController")) { TopicController(get()) }
@@ -69,4 +89,5 @@ val appModule = module {
     single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<IRouteController>(named("rankController")) { RankController(get()) }
     single<IRouteController>(named("adminController")) { AdminController(get(), get(), get(), get()) }
+    single<IRouteController>(named("stakeController")) { ParimutuelController(get(), get(), get(), get()) }
 }

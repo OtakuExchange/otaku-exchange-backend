@@ -24,6 +24,7 @@ fun Application.configureRouting() {
     val subtopicController = get<IRouteController>(named("subtopicController"))
     val orderController    = get<IRouteController>(named("orderController"))
     val rankController     = get<IRouteController>(named("rankController"))
+    val stakeController    = get<IRouteController>(named("stakeController"))
 
     routing {
         // Handle CORS preflight for all routes
@@ -45,6 +46,7 @@ fun Application.configureRouting() {
             orderController.registerRoutes(this)
             subtopicController.registerRoutes(this)
             rankController.registerRoutes(this)
+            stakeController.registerRoutes(this)      // public: pool list + preview
         }
 
         // Protected writes — valid Clerk JWT required
@@ -55,6 +57,7 @@ fun Application.configureRouting() {
             orderController.registerProtectedRoutes(this)
             subtopicController.registerProtectedRoutes(this)
             adminController.registerProtectedRoutes(this)
+            stakeController.registerProtectedRoutes(this)  // protected: place stake + resolve
         }
     }
 }

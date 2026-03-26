@@ -70,6 +70,12 @@ class NeonEventRepository : IEventRepository {
         EventTable.deleteWhere { EventTable.id eq id } > 0
     }
 
+    override suspend fun closeStaking(id: Uuid): Boolean = transaction {
+        EventTable.update({ EventTable.id eq id }) {
+            it[status] = "STAKING_CLOSED"
+        } > 0
+    }
+
     // ── Row mapper ────────────────────────────────────────────────────────────
 
     private fun ResultRow.toEvent() = Event(

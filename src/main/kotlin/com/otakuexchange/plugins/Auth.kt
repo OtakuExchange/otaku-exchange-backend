@@ -10,7 +10,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import org.slf4j.LoggerFactory
-import java.net.URL
+import java.net.URI
 import java.security.interfaces.RSAPublicKey
 import java.util.concurrent.TimeUnit
 import io.github.cdimascio.dotenv.dotenv
@@ -21,7 +21,7 @@ fun Application.configureAuth() {
 
     val clerkJwksUrl = System.getenv("CLERK_JWKS_URL") ?: dotenv()["CLERK_JWKS_URL"]
 
-    val clerkJwkProvider = JwkProviderBuilder(URL(clerkJwksUrl))
+    val clerkJwkProvider = JwkProviderBuilder(URI(clerkJwksUrl).toURL())
         .cached(10, 24, TimeUnit.HOURS)
         .rateLimited(100, 1, TimeUnit.MINUTES)
         .build()
