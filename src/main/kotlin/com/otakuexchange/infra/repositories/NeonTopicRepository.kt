@@ -32,6 +32,7 @@ class NeonTopicRepository : ITopicRepository {
                 id          = topic.id,
                 topic       = topic.topic,
                 description = topic.description,
+                hidden      = topic.hidden,
                 subtopics   = subtopicsByTopic[topic.id] ?: emptyList()
             )
         }
@@ -51,6 +52,7 @@ class NeonTopicRepository : ITopicRepository {
             id          = topic.id,
             topic       = topic.topic,
             description = topic.description,
+            hidden      = topic.hidden,
             subtopics   = subtopics
         )
     }
@@ -60,6 +62,7 @@ class NeonTopicRepository : ITopicRepository {
             it[id] = topic.id
             it[TopicTable.topic] = topic.topic
             it[description] = topic.description
+            it[hidden] = topic.hidden
         }
         topic
     }
@@ -68,6 +71,7 @@ class NeonTopicRepository : ITopicRepository {
         TopicTable.update({ TopicTable.id eq topic.id }) {
             it[TopicTable.topic] = topic.topic
             it[description] = topic.description
+            it[hidden] = topic.hidden
         }
         topic
     }
@@ -79,7 +83,8 @@ class NeonTopicRepository : ITopicRepository {
     private fun ResultRow.toTopic() = Topic(
         id          = this[TopicTable.id],
         topic       = this[TopicTable.topic],
-        description = this[TopicTable.description]
+        description = this[TopicTable.description],
+        hidden      = this[TopicTable.hidden]
     )
 
     private fun ResultRow.toSubtopic() = Subtopic(

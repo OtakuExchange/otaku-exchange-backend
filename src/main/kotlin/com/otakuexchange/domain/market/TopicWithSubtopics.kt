@@ -8,5 +8,6 @@ data class TopicWithSubtopics(
     val id: Uuid,
     val topic: String,
     val description: String? = null,
+    val hidden: Boolean = false,
     val subtopics: List<Subtopic>
 )
