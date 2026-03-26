@@ -6,6 +6,7 @@ object TopicTable : Table("topics") {
     val id = uuid("id")
     val topic = text("topic")
     val description = text("description").nullable()
+    val hidden = bool("hidden").default(false)
 
     override val primaryKey = PrimaryKey(id)
 }
