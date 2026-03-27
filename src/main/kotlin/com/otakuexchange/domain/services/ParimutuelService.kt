@@ -28,6 +28,10 @@ class ParimutuelService(
             marketPoolRepository.getById(marketPoolId)
         } ?: error("Market pool $marketPoolId not found")
 
+        if (eventRepository.getById(pool.eventId, null)?.status != "open") {
+            error("Event is not open for staking")
+        }
+
         val deducted = withContext(Dispatchers.IO) {
             userRepository.lockBalance(userId, amount.toLong())
         }
