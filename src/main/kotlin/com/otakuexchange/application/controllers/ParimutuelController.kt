@@ -44,7 +44,7 @@ class ParimutuelController(
         // List all pools for an event (amounts update as users stake)
         route.get("/events/{eventId}/pools") {
             val eventId = parseUuid(call, "eventId") ?: return@get
-            val pools = marketPoolRepository.getByEventId(eventId)
+            val pools = marketPoolRepository.getByEventIdWithEntity(eventId)
             call.respond(pools)
         }
 

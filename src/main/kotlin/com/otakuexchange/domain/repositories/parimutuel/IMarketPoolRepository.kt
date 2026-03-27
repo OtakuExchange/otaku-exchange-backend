@@ -1,10 +1,12 @@
 package com.otakuexchange.domain.repositories.parimutuel
 
 import com.otakuexchange.domain.parimutuel.MarketPool
+import com.otakuexchange.domain.parimutuel.MarketPoolWithEntity
 import kotlin.uuid.Uuid
 
 interface IMarketPoolRepository {
     suspend fun getByEventId(eventId: Uuid): List<MarketPool>
+    suspend fun getByEventIdWithEntity(eventId: Uuid): List<MarketPoolWithEntity>
     suspend fun getById(id: Uuid): MarketPool?
     suspend fun create(marketPool: MarketPool): MarketPool
     suspend fun update(marketPool: MarketPool): MarketPool
