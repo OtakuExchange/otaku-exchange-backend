@@ -32,13 +32,13 @@ class ParimutuelService(
             error("Event is not open for staking")
         }
 
-        val deducted = withContext(Dispatchers.IO) {
-            userRepository.lockBalance(userId, amount.toLong())
+        val hasEnough = withContext(Dispatchers.IO) {
+            userRepository.hasBalance(userId, amount.toLong())
         }
-        check(deducted) { "Insufficient balance" }
+        check(hasEnough) { "Insufficient balance" }
 
         withContext(Dispatchers.IO) {
-            userRepository.consumeLockedBalance(userId, amount.toLong())
+            userRepository.subtractBalance(userId, amount.toLong())
         }
 
         return withContext(Dispatchers.IO) {
