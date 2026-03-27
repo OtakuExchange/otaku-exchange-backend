@@ -12,6 +12,7 @@ object UserTable : Table("users") {
     val balance = long("balance").default(0L)
     val lockedBalance = long("locked_balance").default(0L)
     val isAdmin = bool("is_admin").default(false)
+    val avatarUrl = text("avatar_url").nullable()
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)

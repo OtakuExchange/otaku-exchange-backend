@@ -20,7 +20,8 @@ class NeonRankRepository : IRankRepository {
                     rank = index + 1,
                     userId = row[UserTable.id],
                     username = row[UserTable.username],
-                    balance = row[UserTable.balance]
+                    balance = row[UserTable.balance],
+                    avatarUrl = row[UserTable.avatarUrl]
                 )
             }
     }

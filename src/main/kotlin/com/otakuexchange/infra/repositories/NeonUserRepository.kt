@@ -55,6 +55,7 @@ class NeonUserRepository : IUserRepository {
             it[balance] = user.balance
             it[lockedBalance] = user.lockedBalance
             it[isAdmin] = user.isAdmin
+            it[avatarUrl] = user.avatarUrl
             it[createdAt] = user.createdAt
         }
         user
@@ -68,6 +69,12 @@ class NeonUserRepository : IUserRepository {
             .where { UserTable.id eq id }
             .singleOrNull()
             ?.toUser() ?: error("User not found after update")
+    }
+
+    override suspend fun updateAvatarUrl(id: Uuid, avatarUrl: String): Unit = transaction {
+        UserTable.update({ UserTable.id eq id }) {
+            it[UserTable.avatarUrl] = avatarUrl
+        }
     }
 
     override suspend fun addBalance(id: Uuid, amount: Long): User = transaction {
@@ -111,6 +118,7 @@ class NeonUserRepository : IUserRepository {
         balance = this[UserTable.balance],
         lockedBalance = this[UserTable.lockedBalance],
         isAdmin = this[UserTable.isAdmin],
+        avatarUrl = this[UserTable.avatarUrl],
         createdAt = this[UserTable.createdAt]
     )
 }

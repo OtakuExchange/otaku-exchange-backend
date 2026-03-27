@@ -51,7 +51,13 @@ val ClerkUserSyncPlugin = createRouteScopedPlugin("ClerkUserSyncPlugin") {
                 }
 
             } else {
-                // Existing user — check daily reward
+                // Existing user — sync avatar URL if changed
+                val avatarUrl = principal.payload.getClaim("avatarUrl").asString()
+                if (avatarUrl != null && avatarUrl != existingUser.avatarUrl) {
+                    userRepository.updateAvatarUrl(existingUser.id, avatarUrl)
+                }
+
+                // Check daily reward
                 val rewardKey = "daily:reward:${existingUser.id}"
                 val alreadyClaimed = RedisFactory.pool.getResource().use { jedis ->
                     jedis.exists(rewardKey)

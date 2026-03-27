@@ -11,6 +11,7 @@ interface IUserRepository {
     suspend fun findByUsername(username: String): User?
     suspend fun save(user: User): User
     suspend fun updateUsername(id: Uuid, username: String): User
+    suspend fun updateAvatarUrl(id: Uuid, avatarUrl: String): Unit
     suspend fun addBalance(id: Uuid, amount: Long): User
         // Deducts from balance and adds to lockedBalance — returns false if insufficient
     suspend fun lockBalance(id: Uuid, amount: Long): Boolean

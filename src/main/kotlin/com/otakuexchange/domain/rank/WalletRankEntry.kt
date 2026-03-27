@@ -8,5 +8,6 @@ data class WalletRankEntry(
     val rank: Int,
     val userId: Uuid,
     val username: String,
-    val balance: Long
+    val balance: Long,
+    val avatarUrl: String? = null
 )
