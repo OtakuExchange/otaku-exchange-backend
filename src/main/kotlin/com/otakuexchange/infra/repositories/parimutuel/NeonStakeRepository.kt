@@ -1,7 +1,10 @@
 package com.otakuexchange.infra.repositories.parimutuel
 
+import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.parimutuel.Stake
+import com.otakuexchange.domain.parimutuel.StakeWithPool
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
+import com.otakuexchange.infra.tables.EntityTable
 import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
 import com.otakuexchange.infra.tables.parimutuel.StakeTable
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -13,15 +16,19 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.core.JoinType
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 class NeonStakeRepository : IStakeRepository {
 
-    override suspend fun getByUserId(userId: Uuid): List<Stake> = transaction {
-        StakeTable.selectAll()
+    override suspend fun getByUserId(userId: Uuid): List<StakeWithPool> = transaction {
+        StakeTable
+            .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
+            .join(EntityTable, JoinType.LEFT, MarketPoolTable.entityId, EntityTable.id)
+            .selectAll()
             .where { StakeTable.userId eq userId }
-            .map { it.toStake() }
+            .map { it.toStakeWithPool() }
     }
 
     override suspend fun getByMarketPoolId(marketPoolId: Uuid): List<Stake> = transaction {
@@ -98,4 +105,28 @@ class NeonStakeRepository : IStakeRepository {
         createdAt    = this[StakeTable.createdAt],
         updatedAt    = this[StakeTable.updatedAt]
     )
+
+    private fun ResultRow.toStakeWithPool(): StakeWithPool {
+        val entityId = this.getOrNull(EntityTable.id)
+        val entity = if (entityId != null) Entity(
+            id              = entityId,
+            name            = this[EntityTable.name],
+            abbreviatedName = this.getOrNull(EntityTable.abbreviatedName),
+            logoPath        = this[EntityTable.logoPath],
+            color           = this.getOrNull(EntityTable.color),
+            pandaScoreId    = this.getOrNull(EntityTable.pandaScoreId),
+            createdAt       = this[EntityTable.createdAt]
+        ) else null
+
+        return StakeWithPool(
+            id           = this[StakeTable.id],
+            userId       = this[StakeTable.userId],
+            marketPoolId = this[StakeTable.marketPoolId],
+            label        = this[MarketPoolTable.label],
+            entity       = entity,
+            amount       = this[StakeTable.amount],
+            createdAt    = this[StakeTable.createdAt],
+            updatedAt    = this[StakeTable.updatedAt]
+        )
+    }
 }

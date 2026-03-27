@@ -1,11 +1,12 @@
 package com.otakuexchange.domain.repositories.parimutuel
 
 import com.otakuexchange.domain.parimutuel.Stake
+import com.otakuexchange.domain.parimutuel.StakeWithPool
 import kotlin.uuid.Uuid
 
 interface IStakeRepository {
-    /** All stakes a user has placed, across all events. */
-    suspend fun getByUserId(userId: Uuid): List<Stake>
+    /** All stakes a user has placed, across all events, enriched with pool label and entity. */
+    suspend fun getByUserId(userId: Uuid): List<StakeWithPool>
     /** All stakes placed into a specific pool (used for payout at resolution). */
     suspend fun getByMarketPoolId(marketPoolId: Uuid): List<Stake>
     /** Find a specific user's stake in a specific pool, if it exists. */
