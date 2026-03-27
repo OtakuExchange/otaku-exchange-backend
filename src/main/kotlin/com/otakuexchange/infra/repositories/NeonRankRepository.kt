@@ -6,11 +6,13 @@ import com.otakuexchange.infra.tables.UserTable
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.core.eq
 
 class NeonRankRepository : IRankRepository {
 
     override suspend fun getWalletLeaderboard(limit: Int): List<WalletRankEntry> = transaction {
         UserTable.selectAll()
+            .where { UserTable.isAdmin eq false }
             .orderBy(UserTable.balance, SortOrder.DESC)
             .limit(limit)
             .mapIndexed { index, row ->
