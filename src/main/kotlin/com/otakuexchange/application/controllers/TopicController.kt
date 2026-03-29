@@ -13,7 +13,7 @@ class TopicController(private val topicRepository: ITopicRepository) : IRouteCon
     override fun registerRoutes(route: Route) {
 
         route.get("/topics") {
-            val topics = topicRepository.getTopics().filter { !it.hidden }
+            val topics = topicRepository.getTopics()
             call.respond(topics)
         }
 
