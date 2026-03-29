@@ -24,6 +24,10 @@ class ParimutuelService(
     suspend fun placeStake(userId: Uuid, marketPoolId: Uuid, amount: Int): Stake {
         require(amount > 0) { "Stake amount must be greater than 0" }
 
+        require(eventRepository.getById(marketPoolRepository.getById(marketPoolId)?.eventId ?: return error("Pool not found"), null)?.status == "open") {
+            "Event is not open for staking"
+        }
+
         val pool = withContext(Dispatchers.IO) {
             marketPoolRepository.getById(marketPoolId)
         } ?: error("Market pool $marketPoolId not found")
@@ -133,7 +137,7 @@ class ParimutuelService(
                         name           = eventWithBookmark.name,
                         description    = eventWithBookmark.description,
                         closeTime      = eventWithBookmark.closeTime,
-                        status         = "RESOLVED",
+                        status         = "resolved",
                         resolutionRule = eventWithBookmark.resolutionRule,
                         logoPath       = eventWithBookmark.logoPath,
                         pandaScoreId   = eventWithBookmark.pandaScoreId

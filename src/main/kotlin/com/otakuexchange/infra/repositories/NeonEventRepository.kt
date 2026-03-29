@@ -72,7 +72,7 @@ class NeonEventRepository : IEventRepository {
 
     override suspend fun closeStaking(id: Uuid): Boolean = transaction {
         EventTable.update({ EventTable.id eq id }) {
-            it[status] = "STAKING_CLOSED"
+            it[status] = "staking_closed"
         } > 0
     }
 
