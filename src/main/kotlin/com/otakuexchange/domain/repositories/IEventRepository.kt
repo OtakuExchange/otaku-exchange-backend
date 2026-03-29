@@ -11,4 +11,7 @@ interface IEventRepository {
     suspend fun update(event: Event): Event
     suspend fun delete(id: Uuid): Boolean
     suspend fun closeStaking(id: Uuid): Boolean
+    suspend fun updateStatus(id: Uuid, status: String): Boolean
+    suspend fun getEventsByStatus(status: String, currentUserId: Uuid?): List<EventWithBookmark>
+    suspend fun getRecentlyResolvedEvents(currentUserId: Uuid?): List<EventWithBookmark>
 }

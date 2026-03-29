@@ -13,6 +13,8 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 class NeonEventRepository : IEventRepository {
@@ -73,6 +75,31 @@ class NeonEventRepository : IEventRepository {
     override suspend fun closeStaking(id: Uuid): Boolean = transaction {
         EventTable.update({ EventTable.id eq id }) {
             it[status] = "staking_closed"
+        } > 0
+    }
+
+    override suspend fun getEventsByStatus(status: String, currentUserId: Uuid?): List<EventWithBookmark> = transaction {
+        val events = EventTable.selectAll()
+            .where { EventTable.status eq status }
+            .map { it.toEvent() }
+        val eventIds = events.map { it.id }
+        val volumeByEvent = calcVolumeByEvent(eventIds)
+        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+    }
+
+    override suspend fun getRecentlyResolvedEvents(currentUserId: Uuid?): List<EventWithBookmark> = transaction {
+        val sevenDaysAgo = Clock.System.now() - 7.days
+        val events = EventTable.selectAll()
+            .where { (EventTable.status eq "RESOLVED") and (EventTable.closeTime greaterEq sevenDaysAgo) }
+            .map { it.toEvent() }
+        val eventIds = events.map { it.id }
+        val volumeByEvent = calcVolumeByEvent(eventIds)
+        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+    }
+
+    override suspend fun updateStatus(id: Uuid, status: String): Boolean = transaction {
+        EventTable.update({ EventTable.id eq id }) {
+            it[EventTable.status] = status
         } > 0
     }
 

@@ -20,6 +20,9 @@ import kotlin.uuid.Uuid
 @Serializable
 data class CreateCommentRequest(val content: String, val parentId: Uuid? = null)
 
+@Serializable
+data class UpdateStatusRequest(val status: String)
+
 class EventController(
     private val eventRepository: IEventRepository,
     private val commentRepository: ICommentRepository,
@@ -70,7 +73,27 @@ class EventController(
             }
             call.respond(commentRepository.getByEventId(id, currentUser?.id))
         }
+        
+        route.get("/events/open") {
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            call.respond(eventRepository.getEventsByStatus("open", currentUser?.id))
+        }
 
+        route.get("/events/staking-closed") {
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            call.respond(eventRepository.getEventsByStatus("staking_closed", currentUser?.id))
+        }
+
+        route.get("/events/resolved/recent") {
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            call.respond(eventRepository.getRecentlyResolvedEvents(currentUser?.id))
+        }
     }
 
     override fun registerProtectedRoutes(route: Route) {
@@ -178,6 +201,26 @@ class EventController(
             }
             val deleted = eventRepository.delete(id)
             if (deleted) call.respond(HttpStatusCode.NoContent)
+            else call.respond(HttpStatusCode.NotFound, "Event not found")
+        }
+
+        route.patch("/events/{id}/status") {
+            val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
+                ?: return@patch call.respond(HttpStatusCode.Unauthorized, "User not found")
+            if (!user.isAdmin) return@patch call.respond(HttpStatusCode.Forbidden, "Admin only")
+
+            val id = try { Uuid.parse(call.parameters["id"] ?: "") }
+            catch (e: Exception) { call.respond(HttpStatusCode.BadRequest, "Invalid id"); return@patch }
+
+            val body = call.receive<UpdateStatusRequest>()
+            val allowed = setOf("open", "hidden", "staking_closed")
+            if (body.status.lowercase() !in allowed) {
+                call.respond(HttpStatusCode.BadRequest, "Status must be one of: $allowed")
+                return@patch
+            }
+
+            val updated = eventRepository.updateStatus(id, body.status)
+            if (updated) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.NotFound, "Event not found")
         }
     }

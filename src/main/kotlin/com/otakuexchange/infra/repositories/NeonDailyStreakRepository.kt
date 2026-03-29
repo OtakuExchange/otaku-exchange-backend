@@ -23,12 +23,12 @@ import kotlin.uuid.Uuid
 class NeonDailyStreakRepository : IDailyStreakRepository {
 
     private fun rewardForStreak(streak: Int): Long = when {
-        streak <= 0 -> 2000L
-        streak == 1 -> 4000L
-        streak == 2 -> 6000L
-        streak == 3 -> 8000L
-        streak == 4 -> 10000L
-        else        -> 10000L
+        streak <= 0 -> 10000L
+        streak == 1 -> 20000L
+        streak == 2 -> 30000L
+        streak == 3 -> 40000L
+        streak == 4 -> 50000L
+        else        -> 50000L
     }
 
     override suspend fun getStatus(userId: Uuid): StreakStatus = transaction {
