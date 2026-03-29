@@ -12,7 +12,7 @@ data class MarketPool(
     val entityId: Uuid? = null,
     val label: String,
     val isWinner: Boolean = false,
-    val amount: Int = 0,   // total cents staked into this pool
+    val amount: Int = 5000,   // total cents staked into this pool, default $50
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = Clock.System.now()
 )

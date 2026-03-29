@@ -1,5 +1,6 @@
 package com.otakuexchange.application.controllers
 
+import com.otakuexchange.domain.parimutuel.MarketPool
 import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
@@ -21,6 +22,12 @@ data class PlaceStakeRequest(val marketPoolId: Uuid, val amount: Int)
 
 @Serializable
 data class ResolveEventRequest(val winningPoolId: Uuid)
+
+@Serializable
+data class CreateMarketPoolRequest(
+    val label: String,
+    val entityId: Uuid? = null
+)
 
 class ParimutuelController(
     private val parimutuelService: ParimutuelService,
@@ -138,6 +145,26 @@ class ParimutuelController(
             }
 
             call.respond(HttpStatusCode.OK, mapOf("resolved" to true))
+        }
+
+        // POST /events/{eventId}/pools — admin only
+        route.post("/events/{eventId}/pools") {
+            val user = resolveUser(call)
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
+            if (!user.isAdmin) {
+                call.respond(HttpStatusCode.Forbidden, "Admin only")
+                return@post
+            }
+            val eventId = parseUuid(call, "eventId") ?: return@post
+            val body = call.receive<CreateMarketPoolRequest>()
+            val pool = marketPoolRepository.create(
+                MarketPool(
+                    eventId = eventId,
+                    entityId = body.entityId,
+                    label = body.label
+                )
+            )
+            call.respond(HttpStatusCode.Created, pool)
         }
     }
 
