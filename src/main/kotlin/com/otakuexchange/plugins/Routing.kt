@@ -40,7 +40,6 @@ fun Application.configureRouting() {
 
         // Public GETs — sync user if JWT is present, no auth required
         authenticate("clerk", optional = true) {
-            syncClerkUser()
             authController.registerRoutes(this)
             topicController.registerRoutes(this)
             marketController.registerRoutes(this)
