@@ -26,7 +26,11 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.ktor.server.config.yaml)
     testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.junit.jupiter)
     // Ktor client (for OAuth)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
@@ -55,6 +59,10 @@ dependencies {
     implementation(libs.koin.core)
 
     implementation(libs.jedis)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.register<JavaExec>("runDev") {
