@@ -48,6 +48,15 @@ class ParimutuelController(
 
     override fun registerRoutes(route: Route) {
 
+        // GET /events/{eventId}/stakes?limit=N&includeAdmins=false — top N stakes per pool, ordered by amount desc (default 10)
+        route.get("/events/{eventId}/stakes") {
+            val eventId = parseUuid(call, "eventId") ?: return@get
+            val limitPerPool = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
+            val includeAdmins = call.request.queryParameters["includeAdmins"]?.toBooleanStrictOrNull() ?: true
+            val stakes = stakeRepository.getByEventId(eventId, limitPerPool, includeAdmins)
+            call.respond(stakes)
+        }
+
         // List all pools for an event (amounts update as users stake)
         route.get("/events/{eventId}/pools") {
             val eventId = parseUuid(call, "eventId") ?: return@get

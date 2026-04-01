@@ -4,12 +4,15 @@ import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.parimutuel.PortfolioPool
 import com.otakuexchange.domain.parimutuel.Stake
 import com.otakuexchange.domain.parimutuel.StakeWithPool
+import com.otakuexchange.domain.parimutuel.StakeWithUser
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
 import com.otakuexchange.infra.tables.EntityTable
 import com.otakuexchange.infra.tables.EventTable
+import com.otakuexchange.infra.tables.UserTable
 import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
 import com.otakuexchange.infra.tables.parimutuel.StakeTable
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -100,6 +103,34 @@ class NeonStakeRepository : IStakeRepository {
 
     override suspend fun delete(id: Uuid): Boolean = transaction {
         StakeTable.deleteWhere { StakeTable.id eq id } > 0
+    }
+
+    override suspend fun getByEventId(eventId: Uuid, limitPerPool: Int, includeAdmins: Boolean): List<StakeWithUser> = transaction {
+        StakeTable
+            .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
+            .join(UserTable, JoinType.INNER, StakeTable.userId, UserTable.id)
+            .selectAll()
+            .where {
+                val baseCondition = MarketPoolTable.eventId eq eventId
+                if (!includeAdmins) baseCondition and (UserTable.isAdmin eq false)
+                else baseCondition
+            }
+            .orderBy(StakeTable.amount, SortOrder.DESC)
+            .map {
+                StakeWithUser(
+                    id           = it[StakeTable.id],
+                    userId       = it[StakeTable.userId],
+                    username     = it[UserTable.username],
+                    avatarUrl    = it[UserTable.avatarUrl],
+                    marketPoolId = it[StakeTable.marketPoolId],
+                    poolLabel    = it[MarketPoolTable.label],
+                    amount       = it[StakeTable.amount],
+                    createdAt    = it[StakeTable.createdAt],
+                    updatedAt    = it[StakeTable.updatedAt]
+                )
+            }
+            .groupBy { it.marketPoolId }
+            .flatMap { (_, stakes) -> stakes.take(limitPerPool) }
     }
 
     override suspend fun getPortfolioForUser(userId: Uuid): List<PortfolioPool> = transaction {
