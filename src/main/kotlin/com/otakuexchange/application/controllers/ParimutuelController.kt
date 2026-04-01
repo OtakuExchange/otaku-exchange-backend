@@ -81,6 +81,14 @@ class ParimutuelController(
 
     override fun registerProtectedRoutes(route: Route) {
 
+        // GET /portfolio/me — all pools for events the user has staked in, with their stake per pool
+        route.get("/portfolio/me") {
+            val user = resolveUser(call)
+                ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val portfolio = stakeRepository.getPortfolioForUser(user.id)
+            call.respond(portfolio)
+        }
+
         // GET /stakes/me — all stakes for the logged-in user
         route.get("/stakes/me") {
             val user = resolveUser(call)
