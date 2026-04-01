@@ -36,15 +36,14 @@ class AuthControllerTest {
     @BeforeEach
     fun setUp() = clearAllMocks()
 
-    // AuthController registers its own authenticate("clerk") block inside registerRoutes,
-    // so we pass it as publicRoutes (the test harness already installs the "clerk" JWT provider).
+    // AuthController routes are protected; we register them under protectedRoutes.
 
     // ── GET /users/me ───────────────────────────────────────────────────────
 
     @Test
     fun getMe_noAuth_returns401() {
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.get("/users/me")
             assertEquals(HttpStatusCode.Unauthorized, res.status)
         }
@@ -54,7 +53,7 @@ class AuthControllerTest {
     fun getMe_userNotFound_returns404() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns null
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.get("/users/me") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
@@ -66,7 +65,7 @@ class AuthControllerTest {
     fun getMe_found_returnsUserResponse() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns user
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.get("/users/me") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
@@ -82,7 +81,7 @@ class AuthControllerTest {
     @Test
     fun updateUsername_noAuth_returns401() {
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.patch("/users/me/username") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"username":"newname"}""")
@@ -96,7 +95,7 @@ class AuthControllerTest {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns user
         coEvery { userRepo.findByUsername("taken") } returns mockk()
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.patch("/users/me/username") {
                 header(HttpHeaders.Authorization, "Bearer $token")
                 contentType(ContentType.Application.Json)
@@ -112,7 +111,7 @@ class AuthControllerTest {
         coEvery { userRepo.findByUsername("newname") } returns null
         coEvery { userRepo.updateUsername(userId, "newname") } returns user.copy(username = "newname")
         val c = controller()
-        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.patch("/users/me/username") {
                 header(HttpHeaders.Authorization, "Bearer $token")
                 contentType(ContentType.Application.Json)
