@@ -38,8 +38,8 @@ fun Application.configureRouting() {
             call.respondText("ok")
         }
 
-        // Public GETs — sync user if JWT is present, no auth required
-        authenticate("clerk", optional = true) {
+        // Public GETs — accept JWT if present (no per-request user sync)
+        authenticate("clerk_optional", optional = true) {
             authController.registerRoutes(this)
             topicController.registerRoutes(this)
             marketController.registerRoutes(this)
@@ -49,6 +49,11 @@ fun Application.configureRouting() {
             rankController.registerRoutes(this)
             stakeController.registerRoutes(this)      // public: pool list + preview
             entityController.registerRoutes(this)
+        }
+
+        // Auth reads/writes — valid JWT required, but no forced user sync
+        authenticate("clerk_optional") {
+            authController.registerProtectedRoutes(this)
         }
 
         // Protected writes — valid Clerk JWT required

@@ -30,16 +30,20 @@ class NeonMarketPoolRepository : IMarketPoolRepository {
     }
 
     override suspend fun getByEventIdWithEntity(eventId: Uuid): List<MarketPoolWithEntity> = transaction {
+        // Only aggregate volumes for pools belonging to this event.
         val volumeByPool = StakeTable
+            .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
             .select(StakeTable.marketPoolId, StakeTable.amount.sum())
+            .where { MarketPoolTable.eventId eq eventId }
             .groupBy(StakeTable.marketPoolId)
             .associate { it[StakeTable.marketPoolId] to (it[StakeTable.amount.sum()]?.toLong() ?: 0L) }
 
-        MarketPoolTable
+        val pools = MarketPoolTable
             .join(EntityTable, JoinType.LEFT, MarketPoolTable.entityId, EntityTable.id)
             .selectAll()
             .where { MarketPoolTable.eventId eq eventId }
             .map { it.toMarketPoolWithEntity(volumeByPool[it[MarketPoolTable.id]] ?: 0L) }
+        pools
     }
 
     override suspend fun getById(id: Uuid): MarketPool? = transaction {
