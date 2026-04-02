@@ -205,7 +205,7 @@ class ParimutuelController(
             )
             val seedUserId = Uuid.parse("6581d391-a330-449f-9fbd-6b6e8349aff4")
             stakeRepository.addToStake(pool.id, seedUserId, 5000)
-            call.respond(HttpStatusCode.Created, pool)
+            call.respond(HttpStatusCode.Created, ParimutuelService.POOL_SEED_AMOUNT)
         }
     }
 

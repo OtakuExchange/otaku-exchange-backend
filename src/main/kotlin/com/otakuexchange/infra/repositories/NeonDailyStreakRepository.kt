@@ -22,6 +22,10 @@ import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.uuid.Uuid
+import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
+import com.otakuexchange.infra.tables.EventTable
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.and
 
 private const val COMEBACK_RATE = 0.20  // 20% of the remaining gap after base reward
 
@@ -38,26 +42,37 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
 
     /** Get the #1 player's total (balance + stakes), excluding admins */
     private fun getLeaderTotal(): Long {
-        val stakeSum = StakeTable.amount.sum()
+        val activeStakesByUser = StakeTable
+            .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
+            .join(EventTable, JoinType.INNER, MarketPoolTable.eventId, EventTable.id)
+            .select(StakeTable.userId, StakeTable.amount.sum())
+            .where { EventTable.status neq "resolved" }
+            .groupBy(StakeTable.userId)
+            .associate { it[StakeTable.userId] to (it[StakeTable.amount.sum()]?.toLong() ?: 0L) }
+
         return UserTable
-            .join(StakeTable, JoinType.LEFT, UserTable.id, StakeTable.userId)
-            .select(UserTable.balance, stakeSum)
+            .selectAll()
             .where { UserTable.isAdmin eq false }
-            .groupBy(UserTable.id, UserTable.balance)
-            .map { row -> row[UserTable.balance] + (row[stakeSum]?.toLong() ?: 0L) }
+            .map { row ->
+                row[UserTable.balance] + (activeStakesByUser[row[UserTable.id]] ?: 0L)
+            }
             .maxOrNull() ?: 0L
     }
 
     /** Get a specific user's total (balance + stakes) */
     private fun getUserTotal(userId: Uuid): Long {
-        val stakeSum = StakeTable.amount.sum()
-        return UserTable
-            .join(StakeTable, JoinType.LEFT, UserTable.id, StakeTable.userId)
-            .select(UserTable.balance, stakeSum)
-            .where { UserTable.id eq userId }
-            .groupBy(UserTable.id, UserTable.balance)
-            .map { row -> row[UserTable.balance] + (row[stakeSum]?.toLong() ?: 0L) }
+        val activeStakes = StakeTable
+            .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
+            .join(EventTable, JoinType.INNER, MarketPoolTable.eventId, EventTable.id)
+            .select(StakeTable.amount.sum())
+            .where { (StakeTable.userId eq userId) and (EventTable.status neq "resolved") }
+            .map { it[StakeTable.amount.sum()]?.toLong() ?: 0L }
             .firstOrNull() ?: 0L
+
+        return (UserTable.selectAll()
+            .where { UserTable.id eq userId }
+            .firstOrNull()
+            ?.get(UserTable.balance) ?: 0L) + activeStakes
     }
 
     /**

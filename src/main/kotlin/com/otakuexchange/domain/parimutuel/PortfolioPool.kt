@@ -3,6 +3,8 @@ package com.otakuexchange.domain.parimutuel
 import com.otakuexchange.domain.market.Entity
 import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
+import kotlin.time.Instant
+import kotlin.time.Clock
 
 @Serializable
 data class PortfolioPool(
@@ -14,5 +16,6 @@ data class PortfolioPool(
     val amount: Int,
     val volume: Long,
     val userStake: Int?,  // null if user has no stake in this pool
-    val eventStatus: String
+    val eventStatus: String,
+    val createdAt: Instant = Clock.System.now()
 )

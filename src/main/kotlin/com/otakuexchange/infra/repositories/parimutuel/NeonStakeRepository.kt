@@ -186,7 +186,8 @@ class NeonStakeRepository : IStakeRepository {
                     amount      = row[MarketPoolTable.amount],
                     volume      = volumeByPool[poolId] ?: 0L,
                     userStake   = userStakeByPool[poolId],
-                    eventStatus = row[EventTable.status]
+                    eventStatus = row[EventTable.status],
+                    createdAt   = row[MarketPoolTable.createdAt],
                 )
             }
     }
