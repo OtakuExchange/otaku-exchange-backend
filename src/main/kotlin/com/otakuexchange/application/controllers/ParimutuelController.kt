@@ -1,6 +1,7 @@
 package com.otakuexchange.application.controllers
 
 import com.otakuexchange.domain.parimutuel.MarketPool
+import com.otakuexchange.domain.parimutuel.PortfolioResponse
 import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
@@ -90,12 +91,33 @@ class ParimutuelController(
 
     override fun registerProtectedRoutes(route: Route) {
 
-        // GET /portfolio/me — all pools for events the user has staked in, with their stake per pool
+        // GET /portfolio/{userId} — portfolio for any user by ID
+        route.get("/portfolio/{userId}") {
+            val userId = parseUuid(call, "userId") ?: return@get
+            val user = userRepository.findById(userId)
+                ?: return@get call.respond(HttpStatusCode.NotFound, "User not found")
+            val pools = stakeRepository.getPortfolioForUser(userId)
+            call.respond(PortfolioResponse(
+                userId    = user.id,
+                username  = user.username,
+                avatarUrl = user.avatarUrl,
+                balance   = user.balance,
+                pools     = pools
+            ))
+        }
+
+        // GET /portfolio/me — portfolio for the authenticated user
         route.get("/portfolio/me") {
             val user = resolveUser(call)
                 ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
-            val portfolio = stakeRepository.getPortfolioForUser(user.id)
-            call.respond(portfolio)
+            val pools = stakeRepository.getPortfolioForUser(user.id)
+            call.respond(PortfolioResponse(
+                userId    = user.id,
+                username  = user.username,
+                avatarUrl = user.avatarUrl,
+                balance   = user.balance,
+                pools     = pools
+            ))
         }
 
         // GET /stakes/me — all stakes for the logged-in user
