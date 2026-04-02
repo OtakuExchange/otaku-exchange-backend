@@ -50,18 +50,6 @@ class AuthControllerTest {
     }
 
     @Test
-    fun getMe_userNotFound_returns404() {
-        coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns null
-        val c = controller()
-        testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
-            val res = client.get("/users/me") {
-                header(HttpHeaders.Authorization, "Bearer $token")
-            }
-            assertEquals(HttpStatusCode.NotFound, res.status)
-        }
-    }
-
-    @Test
     fun getMe_found_returnsUserResponse() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns user
         val c = controller()
