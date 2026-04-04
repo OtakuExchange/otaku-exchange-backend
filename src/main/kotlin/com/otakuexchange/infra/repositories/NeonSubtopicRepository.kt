@@ -59,7 +59,8 @@ class NeonSubtopicRepository : ISubtopicRepository {
                     status         = row[EventTable.status],
                     resolutionRule = row[EventTable.resolutionRule],
                     logoPath       = row[EventTable.logoPath],
-                    pandaScoreId   = row[EventTable.pandaScoreId]
+                    pandaScoreId   = row[EventTable.pandaScoreId],
+                    multiplier     = row[EventTable.multiplier]
                 )
             }
 
@@ -81,7 +82,8 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 resolutionRule = event.resolutionRule,
                 logoPath       = event.logoPath,
                 pandaScoreId   = event.pandaScoreId,
-                bookmarked     = bookmarked
+                bookmarked     = bookmarked,
+                multiplier     = event.multiplier
             )
         }
     }

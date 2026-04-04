@@ -105,6 +105,7 @@ class ParimutuelServiceTest {
     @Test
     fun getPayoutPreview_formulaCheck() = runTest {
         coEvery { poolRepo.getByEventId(eventId) } returns listOf(poolA, poolB)
+        coEvery { eventRepo.getEventMultiplier(eventId) } returns 1
 
         // hypothetical 100 into poolA (80000), poolB (70000)
         // newPoolTotal (user only) = (80000 + 100) - SEED
@@ -121,6 +122,7 @@ class ParimutuelServiceTest {
     fun getPayoutPreview_emptyPool_returnsAmount() = runTest {
         val emptyPool = poolA.copy(amount = 0)
         coEvery { poolRepo.getByEventId(eventId) } returns listOf(emptyPool, poolB)
+        coEvery { eventRepo.getEventMultiplier(eventId) } returns 1
 
         // newPoolTotal = (0 + 100) - SEED < 0 → edge case returns hypotheticalAmount
         val payout = service.getPayoutPreview(eventId, poolAId, 100)
@@ -153,6 +155,7 @@ class ParimutuelServiceTest {
         coEvery { poolRepo.getById(poolAId) } returns seedOnlyPool
         coEvery { stakeRepo.findByUserAndPool(userId, poolAId) } returns Stake(userId = userId, marketPoolId = poolAId, amount = 50)
         coEvery { poolRepo.getByEventId(eventId) } returns listOf(seedOnlyPool, poolB)
+        coEvery { eventRepo.getEventMultiplier(eventId) } returns 1
 
         assertEquals(0, service.getCurrentPayout(userId, poolAId))
     }
@@ -162,6 +165,7 @@ class ParimutuelServiceTest {
         coEvery { poolRepo.getById(poolAId) } returns poolA
         coEvery { stakeRepo.findByUserAndPool(userId, poolAId) } returns Stake(userId = userId, marketPoolId = poolAId, amount = 100)
         coEvery { poolRepo.getByEventId(eventId) } returns listOf(poolA, poolB)
+        coEvery { eventRepo.getEventMultiplier(eventId) } returns 1
 
         // stake=100, poolA=80000, grandTotal=150000
         // share = 100 / (80000 - SEED), payout = share * (150000 - SEED)
@@ -195,6 +199,7 @@ class ParimutuelServiceTest {
         coEvery { poolRepo.markWinner(poolAId) } returns poolA.copy(isWinner = true)
         coEvery { eventRepo.getById(eventId, null) } returns openEvent()
         coEvery { eventRepo.update(any()) } returns mockk()
+        coEvery { eventRepo.getEventMultiplier(eventId) } returns 1
         coEvery { userRepo.addBalance(any(), any()) } returns mockk()
 
         service.resolveEvent(eventId, poolAId)

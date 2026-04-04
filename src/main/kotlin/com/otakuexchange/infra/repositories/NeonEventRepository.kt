@@ -64,6 +64,7 @@ class NeonEventRepository : IEventRepository {
             it[resolutionRule] = event.resolutionRule
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
+            it[multiplier]     = event.multiplier
         }
         event
     }
@@ -97,6 +98,13 @@ class NeonEventRepository : IEventRepository {
         events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
     }
 
+    override suspend fun getEventMultiplier(id: Uuid): Int = transaction {
+        EventTable.selectAll()
+            .where { EventTable.id eq id }
+            .singleOrNull()
+            ?.get(EventTable.multiplier) ?: 1
+    }
+
     override suspend fun updateStatus(id: Uuid, status: String): Boolean = transaction {
         EventTable.update({ EventTable.id eq id }) {
             it[EventTable.status] = status
@@ -116,7 +124,8 @@ class NeonEventRepository : IEventRepository {
         resolutionRule = this[EventTable.resolutionRule],
         logoPath       = this[EventTable.logoPath],
         pandaScoreId   = this[EventTable.pandaScoreId],
-        createdAt      = this[EventTable.createdAt]
+        createdAt      = this[EventTable.createdAt],
+        multiplier     = this[EventTable.multiplier]
     )
 
     private fun calcVolumeByEvent(eventIds: List<Uuid>): Map<Uuid, Long> {
@@ -161,7 +170,8 @@ class NeonEventRepository : IEventRepository {
             pandaScoreId   = pandaScoreId,
             createdAt      = createdAt,
             tradeVolume    = tradeVolume,
-            bookmarked     = bookmarked
+            bookmarked     = bookmarked,
+            multiplier     = multiplier
         )
     }
 }

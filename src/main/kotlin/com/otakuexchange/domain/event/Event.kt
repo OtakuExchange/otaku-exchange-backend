@@ -17,5 +17,6 @@ data class Event(
     val resolutionRule: String,
     val logoPath: String? = null,
     val pandaScoreId: Long? = null,
-    val createdAt: Instant = Clock.System.now()
+    val createdAt: Instant = Clock.System.now(),
+    val multiplier: Int = 1
 )

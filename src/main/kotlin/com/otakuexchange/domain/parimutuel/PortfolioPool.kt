@@ -17,5 +17,6 @@ data class PortfolioPool(
     val volume: Long,
     val userStake: Int?,  // null if user has no stake in this pool
     val eventStatus: String,
-    val createdAt: Instant = Clock.System.now()
+    val createdAt: Instant = Clock.System.now(),
+    val eventMultiplier: Int = 1
 )

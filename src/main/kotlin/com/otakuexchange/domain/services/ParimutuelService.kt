@@ -35,10 +35,12 @@ class ParimutuelService(
      * The POOL_SEED_AMOUNT bonus is distributed proportionally to winners
      * based on their share of the winning pool.
      */
-    private fun calculatePayout(userStake: Int, poolTotal: Int, grandTotal: Int): Int {
+    private fun calculatePayout(userStake: Int, poolTotal: Int, grandTotal: Int, multiplier: Int = 1): Int {
         val userPoolTotal = poolTotal - POOL_SEED_AMOUNT
         if (userPoolTotal <= 0) return 0
-        return (userStake.toDouble() / userPoolTotal.toDouble() * (grandTotal - POOL_SEED_AMOUNT).toDouble()).toInt()
+        val basePayout = (userStake.toDouble() / userPoolTotal.toDouble() * (grandTotal - POOL_SEED_AMOUNT).toDouble()).toInt()
+        val profit = basePayout - userStake
+        return userStake + (profit * multiplier)
     }
 
     /**
@@ -48,13 +50,14 @@ class ParimutuelService(
     private fun calculatePreviewPayout(
         hypotheticalAmount: Int,
         currentPoolTotal: Int,
-        currentGrandTotal: Int
+        currentGrandTotal: Int,
+        multiplier: Int = 1
     ): Int {
         val newPoolTotal  = currentPoolTotal + hypotheticalAmount
         val newGrandTotal = currentGrandTotal + hypotheticalAmount
         val userPoolTotal = newPoolTotal - POOL_SEED_AMOUNT
         if (userPoolTotal <= 0) return hypotheticalAmount
-        return calculatePayout(hypotheticalAmount, newPoolTotal, newGrandTotal)
+        return calculatePayout(hypotheticalAmount, newPoolTotal, newGrandTotal, multiplier)
     }
 
     // ── Staking ───────────────────────────────────────────────────────────────
@@ -95,7 +98,9 @@ class ParimutuelService(
 
         val grandTotal = pools.sumOf { it.amount }
 
-        return calculatePreviewPayout(hypotheticalAmount, targetPool.amount, grandTotal)
+        val multiplier = eventRepository.getEventMultiplier(eventId)
+
+        return calculatePreviewPayout(hypotheticalAmount, targetPool.amount, grandTotal, multiplier)
     }
 
     // ── Current Payout ────────────────────────────────────────────────────────
@@ -112,7 +117,9 @@ class ParimutuelService(
         val pools      = withContext(Dispatchers.IO) { marketPoolRepository.getByEventId(pool.eventId) }
         val grandTotal = pools.sumOf { it.amount }
 
-        return calculatePayout(stake.amount, pool.amount, grandTotal)
+        val multiplier = eventRepository.getEventMultiplier(pool.eventId)
+
+        return calculatePayout(stake.amount, pool.amount, grandTotal, multiplier)
     }
 
     // ── Resolution ────────────────────────────────────────────────────────────
@@ -137,6 +144,7 @@ class ParimutuelService(
         val winningStakes = withContext(Dispatchers.IO) {
             stakeRepository.getByMarketPoolId(winningPoolId)
         }
+        val multiplier = eventRepository.getEventMultiplier(eventId)
 
         coroutineScope {
             launch(Dispatchers.IO) {
@@ -156,7 +164,8 @@ class ParimutuelService(
                         status         = "resolved",
                         resolutionRule = eventWithBookmark.resolutionRule,
                         logoPath       = eventWithBookmark.logoPath,
-                        pandaScoreId   = eventWithBookmark.pandaScoreId
+                        pandaScoreId   = eventWithBookmark.pandaScoreId,
+                        multiplier     = eventWithBookmark.multiplier
                     )
                 )
             }
@@ -165,7 +174,7 @@ class ParimutuelService(
                 winningStakes.forEach { stake: Stake ->
                     if (stake.amount > 0) {
                         launch(Dispatchers.IO) {
-                            val payout = calculatePayout(stake.amount, winningPool.amount, grandTotal)
+                            val payout = calculatePayout(stake.amount, winningPool.amount, grandTotal, multiplier)
                             userRepository.addBalance(stake.userId, payout.toLong())
                         }
                     }
