@@ -11,6 +11,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 class ParimutuelService(
     private val stakeRepository: IStakeRepository,

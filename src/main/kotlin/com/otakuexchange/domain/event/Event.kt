@@ -5,6 +5,10 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
+enum class EventStatus {
+    open, resolved, staking_closed
+}
+
 @Serializable
 data class Event(
     val id: Uuid = Uuid.random(),

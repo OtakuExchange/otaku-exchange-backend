@@ -7,6 +7,7 @@ import com.otakuexchange.domain.repositories.IBookmarkRepository
 import com.otakuexchange.domain.repositories.ICommentRepository
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IUserRepository
+import com.otakuexchange.domain.services.EventSchedulerService
 import com.otakuexchange.domain.user.AuthProvider
 import com.otakuexchange.plugins.clerkUserId
 import io.ktor.http.HttpStatusCode
@@ -27,7 +28,8 @@ class EventController(
     private val eventRepository: IEventRepository,
     private val commentRepository: ICommentRepository,
     private val userRepository: IUserRepository,
-    private val bookmarkRepository: IBookmarkRepository
+    private val bookmarkRepository: IBookmarkRepository,
+    private val scheduler: EventSchedulerService
 ) : IRouteController {
 
     override fun registerRoutes(route: Route) {
@@ -73,7 +75,7 @@ class EventController(
             }
             call.respond(commentRepository.getByEventId(id, currentUser?.id))
         }
-        
+
         route.get("/events/open") {
             val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
                 userRepository.findByProviderUserId(it, AuthProvider.CLERK)
@@ -172,7 +174,8 @@ class EventController(
 
         route.post("/events") {
             val event = call.receive<Event>()
-            val saved = eventRepository.save(event)
+            val saved = eventRepository.save(event.copy(name = event.name.trim()))
+            if (saved.status == "open" || saved.status == "hidden") scheduler.schedule(saved)
             call.respond(HttpStatusCode.Created, saved)
         }
 
@@ -189,6 +192,9 @@ class EventController(
                 return@put
             }
             val updated = eventRepository.update(event)
+            // Reschedule if still open (schedule() cancels the old job automatically)
+            if (updated.status == "open" || updated.status == "hidden") scheduler.schedule(updated)
+            else scheduler.cancel(updated.id)
             call.respond(updated)
         }
 
@@ -199,6 +205,7 @@ class EventController(
                 call.respond(HttpStatusCode.BadRequest, "Invalid id")
                 return@delete
             }
+            scheduler.cancel(id)
             val deleted = eventRepository.delete(id)
             if (deleted) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.NotFound, "Event not found")
@@ -220,6 +227,24 @@ class EventController(
             }
 
             val updated = eventRepository.updateStatus(id, body.status)
+
+            // If manually reopened, reschedule auto-close
+            // If manually closed, cancel the scheduled job so it doesn't re-close
+            if (body.status == "open" || body.status == "hidden") {
+                val event = eventRepository.getById(id, null)
+                event?.let {
+                    scheduler.schedule(Event(
+                        id = it.id, topicId = it.topicId, format = it.format,
+                        name = it.name, description = it.description,
+                        closeTime = it.closeTime, status = it.status,
+                        resolutionRule = it.resolutionRule, logoPath = it.logoPath,
+                        pandaScoreId = it.pandaScoreId
+                    ))
+                }
+            } else {
+                scheduler.cancel(id)
+            }
+
             if (updated) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.NotFound, "Event not found")
         }

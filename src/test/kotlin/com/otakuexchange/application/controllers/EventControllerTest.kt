@@ -9,6 +9,7 @@ import com.otakuexchange.domain.repositories.IBookmarkRepository
 import com.otakuexchange.domain.repositories.ICommentRepository
 import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.repositories.IUserRepository
+import com.otakuexchange.domain.services.EventSchedulerService
 import com.otakuexchange.domain.user.AuthProvider
 import com.otakuexchange.domain.user.User
 import com.otakuexchange.testutil.createTestJwt
@@ -26,31 +27,37 @@ import kotlin.uuid.Uuid
 
 class EventControllerTest {
 
-    private val eventRepo = mockk<IEventRepository>()
-    private val commentRepo = mockk<ICommentRepository>()
-    private val userRepo = mockk<IUserRepository>()
-    private val bookmarkRepo = mockk<IBookmarkRepository>()
+    private val eventRepo      = mockk<IEventRepository>()
+    private val commentRepo    = mockk<ICommentRepository>()
+    private val userRepo       = mockk<IUserRepository>()
+    private val bookmarkRepo   = mockk<IBookmarkRepository>()
+    private val eventScheduler = mockk<EventSchedulerService>()
 
-    private val clerkSub = "clerk_event_user"
-    private val userId = Uuid.parse("00000000-0000-0000-0000-000000000001")
-    private val topicId = Uuid.parse("00000000-0000-0000-0000-000000000010")
-    private val eventId = Uuid.parse("00000000-0000-0000-0000-000000000020")
+    private val clerkSub  = "clerk_event_user"
+    private val userId    = Uuid.parse("00000000-0000-0000-0000-000000000001")
+    private val topicId   = Uuid.parse("00000000-0000-0000-0000-000000000010")
+    private val eventId   = Uuid.parse("00000000-0000-0000-0000-000000000020")
     private val commentId = Uuid.parse("00000000-0000-0000-0000-000000000030")
-    private val now = Instant.fromEpochMilliseconds(1_700_000_000_000)
+    private val now       = Instant.fromEpochMilliseconds(1_700_000_000_000)
 
-    private val user = User(id = userId, username = "u", email = "u@e.com", authProvider = AuthProvider.CLERK, providerUserId = clerkSub, createdAt = now)
+    private val user      = User(id = userId, username = "u", email = "u@e.com", authProvider = AuthProvider.CLERK, providerUserId = clerkSub, createdAt = now)
     private val adminUser = user.copy(isAdmin = true)
-    private val token = createTestJwt(clerkSub)
+    private val token     = createTestJwt(clerkSub)
 
     private fun event() = EventWithBookmark(
         id = eventId, topicId = topicId, format = "single", name = "E", description = "d",
         closeTime = now, status = "open", resolutionRule = "r", bookmarked = false
     )
 
-    private fun controller() = EventController(eventRepo, commentRepo, userRepo, bookmarkRepo)
+    private fun controller() = EventController(eventRepo, commentRepo, userRepo, bookmarkRepo, eventScheduler)
 
     @BeforeEach
-    fun setUp() = clearAllMocks()
+    fun setUp() {
+        clearAllMocks()
+        // blanket scheduler mocks so tests that don't care about scheduling don't fail
+        every { eventScheduler.schedule(any()) } just Runs
+        every { eventScheduler.cancel(any()) } just Runs
+    }
 
     // ── GET /topics/{topicId}/events ─────────────────────────────────────────
 
@@ -258,6 +265,7 @@ class EventControllerTest {
     fun updateStatus_admin_validStatus_returns204() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns adminUser
         coEvery { eventRepo.updateStatus(eventId, "open") } returns true
+        coEvery { eventRepo.getById(eventId, null) } returns event()
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.patch("/events/$eventId/status") {

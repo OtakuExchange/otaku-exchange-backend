@@ -46,6 +46,7 @@ import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
 import com.otakuexchange.application.controllers.ParimutuelController
 import com.otakuexchange.domain.services.ParimutuelService
+import com.otakuexchange.domain.services.EventSchedulerService
 
 import com.otakuexchange.domain.repositories.IDailyStreakRepository
 import com.otakuexchange.infra.repositories.NeonDailyStreakRepository
@@ -77,6 +78,7 @@ val appModule = module {
     // Services
     single { OrderMatchingService(get(), get(), get(), get(), get()) }
     single { MarketSeederService(get(), get()) }
+    single { EventSchedulerService(get()) }
     single {
         ParimutuelService(
             stakeRepository       = get(),
@@ -89,7 +91,7 @@ val appModule = module {
     // Controllers
     single<IRouteController>(named("topicController")) { TopicController(get()) }
     single<IRouteController>(named("marketController")) { MarketController(get(), get(), get(), get()) }
-    single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get()) }
+    single<IRouteController>(named("eventController")) { EventController(get(), get(), get(), get(), get()) }
     single<IRouteController>(named("subtopicController")) { SubtopicController(get(), get()) }
     single<IRouteController>(named("authController")) { AuthController(get()) }
     single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get(), get()) }

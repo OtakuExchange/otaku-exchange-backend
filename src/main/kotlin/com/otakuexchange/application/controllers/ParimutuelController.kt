@@ -17,6 +17,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 @Serializable
 data class PlaceStakeRequest(val marketPoolId: Uuid, val amount: Int)
@@ -183,7 +184,7 @@ class ParimutuelController(
                 return@post call.respond(HttpStatusCode.BadRequest, e.message ?: "Resolution failed")
             }
 
-            call.respond(HttpStatusCode.OK, mapOf("resolved" to true))
+            call.respond(HttpStatusCode.OK, mapOf(EventStatus.resolved to true))
         }
 
         // POST /events/{eventId}/pools — admin only

@@ -55,7 +55,7 @@ class EntityController(
             val body = call.receive<CreateEntityRequest>()
             val entity = entityRepository.save(
                 Entity(
-                    name = body.name,
+                    name = body.name.trim(),
                     abbreviatedName = body.abbreviatedName,
                     logoPath = body.logoPath,
                     color = body.color,

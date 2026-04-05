@@ -37,6 +37,15 @@ class NeonEventRepository : IEventRepository {
         event.withBookmark(currentUserId, volume)
     }
 
+    override suspend fun getNotResolvedEventsByTopicId(topicId: Uuid, currentUserId: Uuid?): List<EventWithBookmark> = transaction {
+        val events = EventTable.selectAll()
+            .where { (EventTable.topicId eq topicId) and (EventTable.status neq "resolved") }
+            .map { it.toEvent() }
+        val eventIds = events.map { it.id }
+        val volumeByEvent = calcVolumeByEvent(eventIds)
+        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+    }
+
     override suspend fun save(event: Event): Event = transaction {
         EventTable.insert {
             it[id]             = event.id
@@ -96,6 +105,15 @@ class NeonEventRepository : IEventRepository {
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
         events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+    }
+
+    override suspend fun getOpenEventsPastCloseTime(): List<Event> = transaction {
+        EventTable.selectAll()
+            .where {
+                ((EventTable.status eq "open") or (EventTable.status eq "hidden")) and
+                (EventTable.closeTime lessEq Clock.System.now())
+            }
+            .map { it.toEvent() }
     }
 
     override suspend fun getEventMultiplier(id: Uuid): Int = transaction {
