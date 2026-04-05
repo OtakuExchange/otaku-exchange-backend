@@ -20,5 +20,6 @@ data class EventWithBookmark(
     val createdAt: Instant = Clock.System.now(),
     val tradeVolume: Long = 0L,
     val bookmarked: Boolean,
-    val multiplier: Int = 1
+    val multiplier: Int = 1,
+    val isNew: Boolean = false
 )
