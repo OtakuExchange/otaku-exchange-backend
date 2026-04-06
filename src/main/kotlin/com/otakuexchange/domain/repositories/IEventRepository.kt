@@ -17,4 +17,5 @@ interface IEventRepository {
     suspend fun getEventMultiplier(id: Uuid): Int
     suspend fun getOpenEventsPastCloseTime(): List<Event>
     suspend fun getNotResolvedEventsByTopicId(topicId: Uuid, currentUserId: Uuid?): List<EventWithBookmark>
+    suspend fun markEventSeen(userId: Uuid, eventId: Uuid)
 }

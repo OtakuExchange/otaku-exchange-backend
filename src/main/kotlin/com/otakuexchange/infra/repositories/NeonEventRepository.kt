@@ -5,6 +5,7 @@ import com.otakuexchange.domain.event.Event
 import com.otakuexchange.domain.event.EventWithBookmark
 import com.otakuexchange.infra.tables.BookmarkTable
 import com.otakuexchange.infra.tables.EventTable
+import com.otakuexchange.infra.tables.UserEventViewTable
 import com.otakuexchange.infra.tables.MarketTable
 import com.otakuexchange.infra.tables.TradeHistoryTable
 import org.jetbrains.exposed.v1.core.*
@@ -14,6 +15,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
+import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
@@ -169,11 +171,25 @@ class NeonEventRepository : IEventRepository {
         }
     }
 
+    override suspend fun markEventSeen(userId: Uuid, eventId: Uuid): Unit = transaction {
+        UserEventViewTable.upsert {
+            it[UserEventViewTable.userId]   = userId
+            it[UserEventViewTable.eventId]  = eventId
+            it[UserEventViewTable.viewedAt] = Clock.System.now()
+        }
+    }
+
     private fun Event.withBookmark(currentUserId: Uuid?, tradeVolume: Long = 0L): EventWithBookmark {
         val bookmarked = if (currentUserId != null) {
             BookmarkTable.selectAll()
                 .where { (BookmarkTable.eventId eq id) and (BookmarkTable.userId eq currentUserId) }
                 .singleOrNull() != null
+        } else false
+
+        val isNew = if (currentUserId != null) {
+            UserEventViewTable.selectAll()
+                .where { (UserEventViewTable.eventId eq id) and (UserEventViewTable.userId eq currentUserId) }
+                .singleOrNull() == null
         } else false
 
         return EventWithBookmark(
@@ -190,7 +206,8 @@ class NeonEventRepository : IEventRepository {
             createdAt      = createdAt,
             tradeVolume    = tradeVolume,
             bookmarked     = bookmarked,
-            multiplier     = multiplier
+            multiplier     = multiplier,
+            isNew          = isNew
         )
     }
 }

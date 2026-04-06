@@ -2,18 +2,28 @@ package com.otakuexchange.application.controllers
 
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.ITopicRepository
+import com.otakuexchange.domain.repositories.IUserRepository
+import com.otakuexchange.domain.user.AuthProvider
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.uuid.Uuid
 
-class TopicController(private val topicRepository: ITopicRepository) : IRouteController {
+class TopicController(
+    private val topicRepository: ITopicRepository,
+    private val userRepository: IUserRepository
+) : IRouteController {
 
     override fun registerRoutes(route: Route) {
 
         route.get("/topics") {
-            val topics = topicRepository.getTopics()
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            val topics = topicRepository.getTopics(currentUser?.id)
             call.respond(topics)
         }
 
@@ -24,7 +34,10 @@ class TopicController(private val topicRepository: ITopicRepository) : IRouteCon
                 call.respond(HttpStatusCode.BadRequest, "Invalid id")
                 return@get
             }
-            val topic = topicRepository.getById(id)
+            val currentUser = call.principal<JWTPrincipal>()?.payload?.subject?.let {
+                userRepository.findByProviderUserId(it, AuthProvider.CLERK)
+            }
+            val topic = topicRepository.getById(id, currentUser?.id)
             if (topic == null) call.respond(HttpStatusCode.NotFound, "Topic not found")
             else call.respond(topic)
         }

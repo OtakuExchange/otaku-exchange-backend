@@ -4,8 +4,11 @@ import com.otakuexchange.domain.repositories.ITopicRepository
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.market.TopicWithSubtopics
 import com.otakuexchange.domain.market.Subtopic
+import com.otakuexchange.infra.tables.EventSubtopicTable
+import com.otakuexchange.infra.tables.EventTable
 import com.otakuexchange.infra.tables.TopicTable
 import com.otakuexchange.infra.tables.SubtopicTable
+import com.otakuexchange.infra.tables.UserEventViewTable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -18,15 +21,37 @@ import kotlin.uuid.Uuid
 
 class NeonTopicRepository : ITopicRepository {
 
-    override suspend fun getTopics(): List<TopicWithSubtopics> = transaction {
+    override suspend fun getTopics(currentUserId: Uuid?): List<TopicWithSubtopics> = transaction {
         val topics = TopicTable.selectAll().map { it.toTopic() }
         val topicIds = topics.map { it.id }
-        val subtopicsByTopic = if (topicIds.isEmpty()) emptyMap() else {
+        val subtopics = if (topicIds.isEmpty()) emptyList() else {
             SubtopicTable.selectAll()
                 .where { SubtopicTable.topicId inList topicIds }
                 .map { it.toSubtopic() }
-                .groupBy { it.topicId }
         }
+        val allEventSubtopicRows = EventSubtopicTable.selectAll().toList()
+        val openEventIds = EventTable.selectAll()
+            .where { EventTable.status eq "open" }
+            .map { it[EventTable.id].toString() }
+            .toSet()
+        val viewedEventIds = if (currentUserId != null) {
+            UserEventViewTable.selectAll()
+                .where { UserEventViewTable.userId eq currentUserId }
+                .map { it[UserEventViewTable.eventId].toString() }
+                .toSet()
+        } else emptySet()
+        val subtopicsWithCount = subtopics.map { subtopic ->
+            val subtopicEvents = allEventSubtopicRows.filter {
+                it[EventSubtopicTable.subtopicId].toString() == subtopic.id.toString()
+            }
+            val count = subtopicEvents.size
+            val isNew = currentUserId != null && subtopicEvents.any { row ->
+                val eventId = row[EventSubtopicTable.eventId].toString()
+                eventId in openEventIds && eventId !in viewedEventIds
+            }
+            subtopic.copy(eventCount = count, isNew = isNew)
+        }
+        val subtopicsByTopic = subtopicsWithCount.groupBy { it.topicId }
         topics.map { topic ->
             TopicWithSubtopics(
                 id          = topic.id,
@@ -38,7 +63,7 @@ class NeonTopicRepository : ITopicRepository {
         }
     }
 
-    override suspend fun getById(id: Uuid): TopicWithSubtopics? = transaction {
+    override suspend fun getById(id: Uuid, currentUserId: Uuid?): TopicWithSubtopics? = transaction {
         val topic = TopicTable.selectAll()
             .where { TopicTable.id eq id }
             .singleOrNull()
@@ -48,12 +73,34 @@ class NeonTopicRepository : ITopicRepository {
             .where { SubtopicTable.topicId eq id }
             .map { it.toSubtopic() }
 
+        val eventSubtopicRows = EventSubtopicTable.selectAll().toList()
+        val openEventIds = EventTable.selectAll()
+            .where { EventTable.status eq "open" }
+            .map { it[EventTable.id].toString() }
+            .toSet()
+        val viewedEventIds = if (currentUserId != null) {
+            UserEventViewTable.selectAll()
+                .where { UserEventViewTable.userId eq currentUserId }
+                .map { it[UserEventViewTable.eventId].toString() }
+                .toSet()
+        } else emptySet()
+        val subtopicsWithMeta = subtopics.map { subtopic ->
+            val subtopicEvents = eventSubtopicRows.filter {
+                it[EventSubtopicTable.subtopicId].toString() == subtopic.id.toString()
+            }
+            val isNew = currentUserId != null && subtopicEvents.any { row ->
+                val eventId = row[EventSubtopicTable.eventId].toString()
+                eventId in openEventIds && eventId !in viewedEventIds
+            }
+            subtopic.copy(eventCount = subtopicEvents.size, isNew = isNew)
+        }
+
         TopicWithSubtopics(
             id          = topic.id,
             topic       = topic.topic,
             description = topic.description,
             hidden      = topic.hidden,
-            subtopics   = subtopics
+            subtopics   = subtopicsWithMeta
         )
     }
 

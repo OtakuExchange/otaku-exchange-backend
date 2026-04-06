@@ -101,6 +101,19 @@ class EventController(
 
     override fun registerProtectedRoutes(route: Route) {
 
+        route.post("/events/{id}/seen") {
+            val eventId = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@post
+            }
+            val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
+            eventRepository.markEventSeen(user.id, eventId)
+            call.respond(HttpStatusCode.NoContent)
+        }
+
         route.post("/events/{id}/comments") {
             val eventId = try {
                 Uuid.parse(call.parameters["id"] ?: "")

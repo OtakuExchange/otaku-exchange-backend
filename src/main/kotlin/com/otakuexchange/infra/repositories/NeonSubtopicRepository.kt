@@ -8,6 +8,7 @@ import com.otakuexchange.infra.tables.BookmarkTable
 import com.otakuexchange.infra.tables.EventSubtopicTable
 import com.otakuexchange.infra.tables.EventTable
 import com.otakuexchange.infra.tables.SubtopicTable
+import com.otakuexchange.infra.tables.UserEventViewTable
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -72,6 +73,12 @@ class NeonSubtopicRepository : ISubtopicRepository {
                     .singleOrNull() != null
             } else false
 
+            val isNew = if (currentUserId != null) {
+                UserEventViewTable.selectAll()
+                    .where { (UserEventViewTable.eventId eq event.id) and (UserEventViewTable.userId eq currentUserId) }
+                    .singleOrNull() == null
+            } else false
+
             EventWithBookmark(
                 id             = event.id,
                 topicId        = event.topicId,
@@ -84,7 +91,8 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 logoPath       = event.logoPath,
                 pandaScoreId   = event.pandaScoreId,
                 bookmarked     = bookmarked,
-                multiplier     = event.multiplier
+                multiplier     = event.multiplier,
+                isNew          = isNew
             )
         }
     }
