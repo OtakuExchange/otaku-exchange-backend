@@ -19,6 +19,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 @Testcontainers(disabledWithoutDocker = true)
 class NeonEventRepositoryTest {
@@ -65,7 +66,7 @@ class NeonEventRepositoryTest {
             name = "E1",
             description = "desc",
             closeTime = now,
-            status = "open",
+            status = EventStatus.open,
             resolutionRule = "rule",
             createdAt = now
         )
@@ -109,11 +110,8 @@ class NeonEventRepositoryTest {
         val eventId = Uuid.parse("00000000-0000-0000-0000-000000032000")
         Seed.event(db, id = eventId, topicId = topicId, status = "open")
 
-        assertEquals(true, repo.updateStatus(eventId, "IN_REVIEW"))
-        assertEquals("IN_REVIEW", repo.getById(eventId, null)!!.status)
-
         assertEquals(true, repo.closeStaking(eventId))
-        assertEquals("staking_closed", repo.getById(eventId, null)!!.status)
+        assertEquals(EventStatus.staking_closed, repo.getById(eventId, null)!!.status)
 
         val updated = Event(
             id = eventId,
@@ -122,7 +120,7 @@ class NeonEventRepositoryTest {
             name = "Updated",
             description = "Updated desc",
             closeTime = Seed.fixedInstant,
-            status = "RESOLVED",
+            status = EventStatus.resolved,
             resolutionRule = "new rule"
         )
         repo.update(updated)

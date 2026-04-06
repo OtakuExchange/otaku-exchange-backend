@@ -16,6 +16,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 class NeonEventRepository : IEventRepository {
 
@@ -54,7 +55,7 @@ class NeonEventRepository : IEventRepository {
             it[name]           = event.name
             it[description]    = event.description
             it[closeTime]      = event.closeTime
-            it[status]         = event.status
+            it[status]         = event.status.name
             it[resolutionRule] = event.resolutionRule
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
@@ -69,7 +70,7 @@ class NeonEventRepository : IEventRepository {
             it[name]           = event.name
             it[description]    = event.description
             it[closeTime]      = event.closeTime
-            it[status]         = event.status
+            it[status]         = event.status.name
             it[resolutionRule] = event.resolutionRule
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
@@ -100,7 +101,7 @@ class NeonEventRepository : IEventRepository {
     override suspend fun getRecentlyResolvedEvents(currentUserId: Uuid?): List<EventWithBookmark> = transaction {
         val sevenDaysAgo = Clock.System.now() - 7.days
         val events = EventTable.selectAll()
-            .where { (EventTable.status eq "RESOLVED") and (EventTable.closeTime greaterEq sevenDaysAgo) }
+            .where { (EventTable.status eq EventStatus.resolved.name) and (EventTable.closeTime greaterEq sevenDaysAgo) }
             .map { it.toEvent() }
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
@@ -138,7 +139,7 @@ class NeonEventRepository : IEventRepository {
         name           = this[EventTable.name],
         description    = this[EventTable.description],
         closeTime      = this[EventTable.closeTime],
-        status         = this[EventTable.status],
+        status = EventStatus.valueOf(this[EventTable.status]),
         resolutionRule = this[EventTable.resolutionRule],
         logoPath       = this[EventTable.logoPath],
         pandaScoreId   = this[EventTable.pandaScoreId],

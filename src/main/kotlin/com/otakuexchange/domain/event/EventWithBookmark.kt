@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 @Serializable
 data class EventWithBookmark(
@@ -13,7 +14,7 @@ data class EventWithBookmark(
     val name: String,
     val description: String,
     val closeTime: Instant,
-    val status: String,
+    val status: EventStatus,
     val resolutionRule: String,
     val logoPath: String? = null,
     val pandaScoreId: Long? = null,

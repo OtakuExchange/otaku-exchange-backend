@@ -70,7 +70,7 @@ class ParimutuelService(
             marketPoolRepository.getById(marketPoolId)
         } ?: error("Market pool $marketPoolId not found")
 
-        if (eventRepository.getById(pool.eventId, null)?.status != "open") {
+        if (eventRepository.getById(pool.eventId, null)?.status != EventStatus.open) {
             error("Event is not open for staking")
         }
 
@@ -162,7 +162,7 @@ class ParimutuelService(
                         name           = eventWithBookmark.name,
                         description    = eventWithBookmark.description,
                         closeTime      = eventWithBookmark.closeTime,
-                        status         = "resolved",
+                        status         = EventStatus.resolved,
                         resolutionRule = eventWithBookmark.resolutionRule,
                         logoPath       = eventWithBookmark.logoPath,
                         pandaScoreId   = eventWithBookmark.pandaScoreId,

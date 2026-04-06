@@ -15,6 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 class ParimutuelServiceTest {
 
@@ -39,7 +40,7 @@ class ParimutuelServiceTest {
     private fun openEvent() = EventWithBookmark(
         id = eventId, topicId = Uuid.parse("00000000-0000-0000-0000-000000000020"),
         format = "single", name = "E", description = "d", closeTime = now,
-        status = "open", resolutionRule = "r", bookmarked = false
+        status = EventStatus.open, resolutionRule = "r", bookmarked = false
     )
 
     @BeforeEach
@@ -91,7 +92,7 @@ class ParimutuelServiceTest {
 
     @Test
     fun placeStake_eventNotOpen_throws() = runTest {
-        val closedEvent = openEvent().copy(status = "staking_closed")
+        val closedEvent = openEvent().copy(status = EventStatus.staking_closed)
         coEvery { poolRepo.getById(poolAId) } returns poolA
         coEvery { eventRepo.getById(eventId, null) } returns closedEvent
 

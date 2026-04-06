@@ -17,6 +17,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 @Serializable
 data class CreateCommentRequest(val content: String, val parentId: Uuid? = null)
@@ -175,7 +176,7 @@ class EventController(
         route.post("/events") {
             val event = call.receive<Event>()
             val saved = eventRepository.save(event.copy(name = event.name.trim()))
-            if (saved.status == "open" || saved.status == "hidden") scheduler.schedule(saved)
+            if (saved.status == EventStatus.open || saved.status == EventStatus.hidden) scheduler.schedule(saved)
             call.respond(HttpStatusCode.Created, saved)
         }
 
@@ -193,7 +194,7 @@ class EventController(
             }
             val updated = eventRepository.update(event)
             // Reschedule if still open (schedule() cancels the old job automatically)
-            if (updated.status == "open" || updated.status == "hidden") scheduler.schedule(updated)
+            if (updated.status == EventStatus.open || updated.status == EventStatus.hidden) scheduler.schedule(updated)
             else scheduler.cancel(updated.id)
             call.respond(updated)
         }
@@ -220,7 +221,7 @@ class EventController(
             catch (e: Exception) { call.respond(HttpStatusCode.BadRequest, "Invalid id"); return@patch }
 
             val body = call.receive<UpdateStatusRequest>()
-            val allowed = setOf("open", "hidden", "staking_closed")
+            val allowed = setOf(EventStatus.open.name, EventStatus.hidden.name, EventStatus.staking_closed.name)
             if (body.status.lowercase() !in allowed) {
                 call.respond(HttpStatusCode.BadRequest, "Status must be one of: $allowed")
                 return@patch
@@ -230,7 +231,7 @@ class EventController(
 
             // If manually reopened, reschedule auto-close
             // If manually closed, cancel the scheduled job so it doesn't re-close
-            if (body.status == "open" || body.status == "hidden") {
+            if (body.status == EventStatus.open.name || body.status == EventStatus.hidden.name) {
                 val event = eventRepository.getById(id, null)
                 event?.let {
                     scheduler.schedule(Event(

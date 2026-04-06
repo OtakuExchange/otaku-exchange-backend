@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 class EventControllerTest {
 
@@ -46,7 +47,7 @@ class EventControllerTest {
 
     private fun event() = EventWithBookmark(
         id = eventId, topicId = topicId, format = "single", name = "E", description = "d",
-        closeTime = now, status = "open", resolutionRule = "r", bookmarked = false
+        closeTime = now, status = EventStatus.open, resolutionRule = "r", bookmarked = false
     )
 
     private fun controller() = EventController(eventRepo, commentRepo, userRepo, bookmarkRepo, eventScheduler)

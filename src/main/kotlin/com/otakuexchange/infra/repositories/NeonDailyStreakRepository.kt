@@ -26,6 +26,7 @@ import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
 import com.otakuexchange.infra.tables.EventTable
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.and
+import com.otakuexchange.domain.event.EventStatus
 
 private const val COMEBACK_RATE = 0.20  // 20% of the remaining gap after base reward
 
@@ -65,7 +66,7 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
             .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
             .join(EventTable, JoinType.INNER, MarketPoolTable.eventId, EventTable.id)
             .select(StakeTable.amount.sum())
-            .where { (StakeTable.userId eq userId) and (EventTable.status neq "resolved") }
+            .where { (StakeTable.userId eq userId) and (EventTable.status neq EventStatus.resolved.name) }
             .map { it[StakeTable.amount.sum()]?.toLong() ?: 0L }
             .firstOrNull() ?: 0L
 
@@ -149,8 +150,9 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
             check(lastClaim < today) { "Already claimed today" }
 
             val prevStreak = row[DailyStreakTable.streak]
-            newStreak = if (lastClaim == yesterday) prevStreak + 1 else 1
-            reward = rewardForStreak(prevStreak)
+            val effectiveStreak = if (lastClaim == yesterday) prevStreak else 0
+            newStreak = effectiveStreak + 1
+            reward = rewardForStreak(effectiveStreak)  // ✅ uses 0 when streak is broken
 
             DailyStreakTable.update({ DailyStreakTable.userId eq userId }) {
                 it[DailyStreakTable.streak] = newStreak

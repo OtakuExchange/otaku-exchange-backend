@@ -14,6 +14,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.event.EventStatus
 
 class NeonSubtopicRepository : ISubtopicRepository {
 
@@ -56,7 +57,7 @@ class NeonSubtopicRepository : ISubtopicRepository {
                     name           = row[EventTable.name],
                     description    = row[EventTable.description],
                     closeTime      = row[EventTable.closeTime],
-                    status         = row[EventTable.status],
+                    status = EventStatus.valueOf(row[EventTable.status]),
                     resolutionRule = row[EventTable.resolutionRule],
                     logoPath       = row[EventTable.logoPath],
                     pandaScoreId   = row[EventTable.pandaScoreId],
