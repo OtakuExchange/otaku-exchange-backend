@@ -10,10 +10,12 @@ import com.otakuexchange.infra.tables.TopicTable
 import com.otakuexchange.infra.tables.SubtopicTable
 import com.otakuexchange.infra.tables.UserEventViewTable
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -40,18 +42,17 @@ class NeonTopicRepository : ITopicRepository {
                 .map { it[UserEventViewTable.eventId].toString() }
                 .toSet()
         } else emptySet()
-        val subtopicsWithCount = subtopics.map { subtopic ->
+        val subtopicsWithNew = subtopics.map { subtopic ->
             val subtopicEvents = allEventSubtopicRows.filter {
                 it[EventSubtopicTable.subtopicId].toString() == subtopic.id.toString()
             }
-            val count = subtopicEvents.size
             val isNew = currentUserId != null && subtopicEvents.any { row ->
                 val eventId = row[EventSubtopicTable.eventId].toString()
                 eventId in openEventIds && eventId !in viewedEventIds
             }
-            subtopic.copy(eventCount = count, isNew = isNew)
+            subtopic.copy(isNew = isNew)
         }
-        val subtopicsByTopic = subtopicsWithCount.groupBy { it.topicId }
+        val subtopicsByTopic = subtopicsWithNew.groupBy { it.topicId }
         topics.map { topic ->
             TopicWithSubtopics(
                 id          = topic.id,
@@ -84,7 +85,7 @@ class NeonTopicRepository : ITopicRepository {
                 .map { it[UserEventViewTable.eventId].toString() }
                 .toSet()
         } else emptySet()
-        val subtopicsWithMeta = subtopics.map { subtopic ->
+        val subtopicsWithNew = subtopics.map { subtopic ->
             val subtopicEvents = eventSubtopicRows.filter {
                 it[EventSubtopicTable.subtopicId].toString() == subtopic.id.toString()
             }
@@ -92,7 +93,7 @@ class NeonTopicRepository : ITopicRepository {
                 val eventId = row[EventSubtopicTable.eventId].toString()
                 eventId in openEventIds && eventId !in viewedEventIds
             }
-            subtopic.copy(eventCount = subtopicEvents.size, isNew = isNew)
+            subtopic.copy(isNew = isNew)
         }
 
         TopicWithSubtopics(
@@ -100,8 +101,34 @@ class NeonTopicRepository : ITopicRepository {
             topic       = topic.topic,
             description = topic.description,
             hidden      = topic.hidden,
-            subtopics   = subtopicsWithMeta
+            subtopics   = subtopicsWithNew
         )
+    }
+
+    override suspend fun getEventCountsBySubtopic(topicId: Uuid): Map<Uuid, Map<String, Int>> = transaction {
+        val subtopicIds = SubtopicTable
+            .selectAll()
+            .where { SubtopicTable.topicId eq topicId }
+            .map { it[SubtopicTable.id] }
+
+        if (subtopicIds.isEmpty()) return@transaction emptyMap()
+
+        val counts: MutableMap<Uuid, MutableMap<String, Int>> =
+            subtopicIds.associateWith { mutableMapOf<String, Int>() }.toMutableMap()
+
+        val countExpr = EventTable.id.count()
+        (EventSubtopicTable innerJoin EventTable)
+            .select(EventSubtopicTable.subtopicId, EventTable.status, countExpr)
+            .where { EventSubtopicTable.subtopicId inList subtopicIds }
+            .groupBy(EventSubtopicTable.subtopicId, EventTable.status)
+            .forEach { row ->
+                val subId = row[EventSubtopicTable.subtopicId]
+                val status = row[EventTable.status]
+                val n = row[countExpr].toInt()
+                counts.getValue(subId)[status] = n
+            }
+
+        counts.mapValues { (_, byStatus) -> byStatus.toMap() }
     }
 
     override suspend fun save(topic: Topic): Topic = transaction {
