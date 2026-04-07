@@ -11,6 +11,5 @@ data class Subtopic(
     val topicId: Uuid,
     val name: String,
     val createdAt: Instant = Clock.System.now(),
-    val eventCount: Int = 0,
     val isNew: Boolean = false
 )

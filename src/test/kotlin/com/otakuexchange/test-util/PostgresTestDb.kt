@@ -9,6 +9,7 @@ import com.otakuexchange.infra.tables.EventSubtopicTable
 import com.otakuexchange.infra.tables.MarketTable
 import com.otakuexchange.infra.tables.SubtopicTable
 import com.otakuexchange.infra.tables.TopicTable
+import com.otakuexchange.infra.tables.UserEventViewTable
 import com.otakuexchange.infra.tables.UserTable
 import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
 import com.otakuexchange.infra.tables.parimutuel.StakeTable
@@ -36,6 +37,7 @@ object PostgresTestDb {
                 EventTable,
                 EventSubtopicTable,
                 UserTable,
+                UserEventViewTable,
                 EntityTable,
                 BookmarkTable,
                 CommentTable,
@@ -57,6 +59,7 @@ object PostgresTestDb {
                   comment_likes,
                   comments,
                   bookmarks,
+                  user_event_views,
                   stakes,
                   market_pools,
                   entities,

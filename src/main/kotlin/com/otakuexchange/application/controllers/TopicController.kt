@@ -4,6 +4,7 @@ import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.repositories.ITopicRepository
 import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.user.AuthProvider
+import kotlinx.serialization.Serializable
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -11,6 +12,19 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.uuid.Uuid
+
+@Serializable
+data class SubtopicEventCounts(
+    val subtopicId: Uuid,
+    val total: Int,
+    val byStatus: Map<String, Int>
+)
+
+@Serializable
+data class TopicSubtopicEventCounts(
+    val topicId: Uuid,
+    val subtopics: List<SubtopicEventCounts>
+)
 
 class TopicController(
     private val topicRepository: ITopicRepository,
@@ -40,6 +54,29 @@ class TopicController(
             val topic = topicRepository.getById(id, currentUser?.id)
             if (topic == null) call.respond(HttpStatusCode.NotFound, "Topic not found")
             else call.respond(topic)
+        }
+
+        route.get("/topics/{id}/subtopics/event-counts") {
+            val id = try {
+                Uuid.parse(call.parameters["id"] ?: "")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid id")
+                return@get
+            }
+            val bySubtopic = topicRepository.getEventCountsBySubtopic(id)
+            val topicSubtopicEventCounts = TopicSubtopicEventCounts(
+                topicId = id,
+                subtopics = bySubtopic.entries
+                    .sortedBy { it.key.toString() }
+                    .map { (subtopicId, byStatus) ->
+                        SubtopicEventCounts(
+                            subtopicId = subtopicId,
+                            total = byStatus.values.sum(),
+                            byStatus = byStatus
+                        )
+                    }
+            )
+            call.respond(topicSubtopicEventCounts)
         }
 
     }

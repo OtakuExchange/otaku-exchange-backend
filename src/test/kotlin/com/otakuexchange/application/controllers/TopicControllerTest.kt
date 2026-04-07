@@ -3,6 +3,7 @@ package com.otakuexchange.application.controllers
 import com.otakuexchange.domain.market.Topic
 import com.otakuexchange.domain.market.TopicWithSubtopics
 import com.otakuexchange.domain.repositories.ITopicRepository
+import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.testutil.createTestJwt
 import com.otakuexchange.testutil.testApp
 import io.ktor.client.request.*
@@ -18,11 +19,12 @@ import kotlin.uuid.Uuid
 class TopicControllerTest {
 
     private val topicRepo = mockk<ITopicRepository>()
+    private val userRepo = mockk<IUserRepository>()
     private val token = createTestJwt("clerk_user")
 
     private val topicId = Uuid.parse("00000000-0000-0000-0000-000000000001")
 
-    private fun controller() = TopicController(topicRepo)
+    private fun controller() = TopicController(topicRepo, userRepo)
 
     @BeforeEach
     fun setUp() = clearAllMocks()
@@ -31,7 +33,7 @@ class TopicControllerTest {
 
     @Test
     fun getTopics_returnsList() {
-        coEvery { topicRepo.getTopics() } returns listOf(
+        coEvery { topicRepo.getTopics(any()) } returns listOf(
             TopicWithSubtopics(id = topicId, topic = "Anime", subtopics = emptyList())
         )
         val c = controller()
@@ -46,7 +48,7 @@ class TopicControllerTest {
 
     @Test
     fun getTopicById_found() {
-        coEvery { topicRepo.getById(topicId) } returns TopicWithSubtopics(id = topicId, topic = "Anime", subtopics = emptyList())
+        coEvery { topicRepo.getById(topicId, any()) } returns TopicWithSubtopics(id = topicId, topic = "Anime", subtopics = emptyList())
         val c = controller()
         testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
             val res = client.get("/topics/$topicId")
@@ -56,7 +58,7 @@ class TopicControllerTest {
 
     @Test
     fun getTopicById_notFound_returns404() {
-        coEvery { topicRepo.getById(topicId) } returns null
+        coEvery { topicRepo.getById(topicId, any()) } returns null
         val c = controller()
         testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
             val res = client.get("/topics/$topicId")
@@ -125,6 +127,22 @@ class TopicControllerTest {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
             assertEquals(HttpStatusCode.NotFound, res.status)
+        }
+    }
+
+    @Test
+    fun getSubtopicEventCounts_returnsAggregate() {
+        coEvery { topicRepo.getEventCountsBySubtopic(topicId) } returns mapOf(
+            Uuid.parse("00000000-0000-0000-0000-000000000010") to mapOf("open" to 2, "hidden" to 1),
+            Uuid.parse("00000000-0000-0000-0000-000000000011") to emptyMap()
+        )
+        val c = controller()
+        testApp(publicRoutes = { c.registerRoutes(this) }) { client ->
+            val res = client.get("/topics/$topicId/subtopics/event-counts")
+            assertEquals(HttpStatusCode.OK, res.status)
+            val body = res.bodyAsText()
+            assertTrue(body.contains("\"topicId\":\"$topicId\""))
+            assertTrue(body.contains("\"byStatus\""))
         }
     }
 }

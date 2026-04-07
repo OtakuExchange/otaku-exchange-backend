@@ -64,7 +64,7 @@ class NeonDailyStreakRepositoryTest {
         val status = repo.getStatus(userId)
         assertEquals(0, status.streak)
         assertEquals(true, status.canClaim)
-        assertEquals(2000L, status.rewardCents)
+        assertEquals(10000L, status.rewardCents)
     }
 
     @Test

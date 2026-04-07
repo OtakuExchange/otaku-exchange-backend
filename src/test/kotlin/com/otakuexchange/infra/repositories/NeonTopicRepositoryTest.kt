@@ -101,5 +101,33 @@ class NeonTopicRepositoryTest {
         assertEquals(true, repo.delete(id))
         assertNull(repo.getById(id))
     }
+
+    @Test
+    fun getEventCountsBySubtopic_aggregatesByStatus_andIncludesEmptySubtopics() = runTest {
+        val topicId = Uuid.parse("00000000-0000-0000-0000-000000001200")
+        Seed.topic(db, id = topicId, topic = "T")
+
+        val subA = Uuid.parse("00000000-0000-0000-0000-000000002100")
+        val subB = Uuid.parse("00000000-0000-0000-0000-000000002101")
+        Seed.subtopic(db, id = subA, topicId = topicId, name = "A")
+        Seed.subtopic(db, id = subB, topicId = topicId, name = "B")
+
+        val e1 = Uuid.parse("00000000-0000-0000-0000-000000003000")
+        val e2 = Uuid.parse("00000000-0000-0000-0000-000000003001")
+        val e3 = Uuid.parse("00000000-0000-0000-0000-000000003002")
+        Seed.event(db, id = e1, topicId = topicId, status = "open")
+        Seed.event(db, id = e2, topicId = topicId, status = "hidden")
+        Seed.event(db, id = e3, topicId = topicId, status = "staking_closed")
+
+        Seed.addEventToSubtopic(db, eventId = e1, subtopicId = subA)
+        Seed.addEventToSubtopic(db, eventId = e2, subtopicId = subA)
+        Seed.addEventToSubtopic(db, eventId = e3, subtopicId = subA)
+
+        val counts = repo.getEventCountsBySubtopic(topicId)
+        assertEquals(setOf(subA, subB), counts.keys.toSet())
+
+        assertEquals(mapOf("open" to 1, "hidden" to 1, "staking_closed" to 1), counts.getValue(subA))
+        assertEquals(emptyMap(), counts.getValue(subB))
+    }
 }
 

@@ -7,6 +7,7 @@ import kotlin.uuid.Uuid
 interface ITopicRepository {
     suspend fun getTopics(currentUserId: Uuid? = null): List<TopicWithSubtopics>
     suspend fun getById(id: Uuid, currentUserId: Uuid? = null): TopicWithSubtopics?
+    suspend fun getEventCountsBySubtopic(topicId: Uuid): Map<Uuid, Map<String, Int>>
     suspend fun save(topic: Topic): Topic
     suspend fun update(topic: Topic): Topic
     suspend fun delete(id: Uuid): Boolean
