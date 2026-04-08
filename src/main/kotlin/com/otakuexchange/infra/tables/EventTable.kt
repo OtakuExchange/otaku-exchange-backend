@@ -17,6 +17,7 @@ object EventTable : Table("events") {
     val pandaScoreId = long("panda_score_id").nullable()
     val createdAt = timestamp("created_at")
     val multiplier = integer("multiplier").default(1)
+    val alias = text("alias").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
