@@ -62,6 +62,7 @@ class NeonEventRepository : IEventRepository {
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
             it[createdAt]      = event.createdAt
+            it[alias]          = event.alias
         }
         event
     }
@@ -77,6 +78,7 @@ class NeonEventRepository : IEventRepository {
             it[logoPath]       = event.logoPath
             it[pandaScoreId]   = event.pandaScoreId
             it[multiplier]     = event.multiplier
+            it[alias]          = event.alias
         }
         event
     }
@@ -146,7 +148,8 @@ class NeonEventRepository : IEventRepository {
         logoPath       = this[EventTable.logoPath],
         pandaScoreId   = this[EventTable.pandaScoreId],
         createdAt      = this[EventTable.createdAt],
-        multiplier     = this[EventTable.multiplier]
+        multiplier     = this[EventTable.multiplier],
+        alias          = this[EventTable.alias]
     )
 
     private fun calcVolumeByEvent(eventIds: List<Uuid>): Map<Uuid, Long> {
@@ -207,7 +210,8 @@ class NeonEventRepository : IEventRepository {
             tradeVolume    = tradeVolume,
             bookmarked     = bookmarked,
             multiplier     = multiplier,
-            isNew          = isNew
+            alias          = alias,
+            isNew          = isNew,
         )
     }
 }

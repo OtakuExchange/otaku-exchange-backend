@@ -22,5 +22,6 @@ data class Event(
     val logoPath: String? = null,
     val pandaScoreId: Long? = null,
     val createdAt: Instant = Clock.System.now(),
-    val multiplier: Int = 1
+    val multiplier: Int = 1,
+    val alias: String? = null
 )
