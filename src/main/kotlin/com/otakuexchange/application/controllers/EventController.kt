@@ -188,7 +188,7 @@ class EventController(
 
         route.post("/events") {
             val event = call.receive<Event>()
-            val saved = eventRepository.save(event.copy(name = event.name.trim()))
+            val saved = eventRepository.save(event.copy(name = event.name.trim(), alias = event.alias?.trim()))
             if (saved.status == EventStatus.open || saved.status == EventStatus.hidden) scheduler.schedule(saved)
             call.respond(HttpStatusCode.Created, saved)
         }

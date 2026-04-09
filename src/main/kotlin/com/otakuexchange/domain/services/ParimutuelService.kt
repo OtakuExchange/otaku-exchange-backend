@@ -176,7 +176,8 @@ class ParimutuelService(
                         resolutionRule = eventWithBookmark.resolutionRule,
                         logoPath       = eventWithBookmark.logoPath,
                         pandaScoreId   = eventWithBookmark.pandaScoreId,
-                        multiplier     = eventWithBookmark.multiplier
+                        multiplier     = eventWithBookmark.multiplier,
+                        alias          = eventWithBookmark.alias
                     )
                 )
             }
