@@ -16,6 +16,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
+import com.otakuexchange.infra.tables.parimutuel.FirstStakeBonusTable
 
 class NeonSubtopicRepository : ISubtopicRepository {
 
@@ -79,6 +80,17 @@ class NeonSubtopicRepository : ISubtopicRepository {
                     .singleOrNull() == null
             } else false
 
+            val isFirstStakeBonusEligible = if (currentUserId != null) {
+                FirstStakeBonusTable.selectAll()
+                    .where {
+                        (FirstStakeBonusTable.eventId eq event.id) and
+                        (FirstStakeBonusTable.userId eq currentUserId)
+                    }
+                    .singleOrNull() == null
+            } else false
+
+            println(isFirstStakeBonusEligible)
+
             EventWithBookmark(
                 id             = event.id,
                 topicId        = event.topicId,
@@ -92,7 +104,8 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 pandaScoreId   = event.pandaScoreId,
                 bookmarked     = bookmarked,
                 multiplier     = event.multiplier,
-                isNew          = isNew
+                isNew          = isNew,
+                isFirstStakeBonusEligible = isFirstStakeBonusEligible
             )
         }
     }

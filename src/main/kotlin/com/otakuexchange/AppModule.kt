@@ -51,6 +51,8 @@ import com.otakuexchange.domain.services.EventSchedulerService
 import com.otakuexchange.domain.repositories.IDailyStreakRepository
 import com.otakuexchange.infra.repositories.NeonDailyStreakRepository
 import com.otakuexchange.application.controllers.DailyStreakController
+import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
+import com.otakuexchange.infra.repositories.parimutuel.NeonFirstStakeBonusRepository
 
 import org.koin.core.qualifier.named
 
@@ -74,6 +76,7 @@ val appModule = module {
     // Parimutuel repositories
     single<IMarketPoolRepository>  { NeonMarketPoolRepository() }
     single<IStakeRepository>       { NeonStakeRepository() }
+    single<IFirstStakeBonusRepository> { NeonFirstStakeBonusRepository() }
 
     // Services
     single { OrderMatchingService(get(), get(), get(), get(), get()) }
@@ -84,7 +87,8 @@ val appModule = module {
             stakeRepository       = get(),
             marketPoolRepository  = get(),
             eventRepository       = get(),
-            userRepository        = get()
+            userRepository        = get(),
+            firstStakeBonusRepository = get()
         )
     }
 
@@ -97,7 +101,7 @@ val appModule = module {
     single<IRouteController>(named("orderController")) { OrderController(get(), get(), get(), get(), get(), get(), get(), get()) }
     single<IRouteController>(named("rankController")) { RankController(get()) }
     single<IRouteController>(named("adminController")) { AdminController(get(), get(), get(), get()) }
-    single<IRouteController>(named("stakeController")) { ParimutuelController(get(), get(), get(), get()) }
+    single<IRouteController>(named("stakeController")) { ParimutuelController(get(), get(), get(), get(), get()) }
     single<IRouteController>(named("dailyStreakController")) { DailyStreakController(get(), get()) }
     single<IRouteController>(named("entityController")) { EntityController(get(), get()) }
 }

@@ -18,6 +18,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
+import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 
 @Serializable
 data class PlaceStakeRequest(val marketPoolId: Uuid, val amount: Int)
@@ -35,7 +36,8 @@ class ParimutuelController(
     private val parimutuelService: ParimutuelService,
     private val marketPoolRepository: IMarketPoolRepository,
     private val stakeRepository: IStakeRepository,
-    private val userRepository: IUserRepository
+    private val userRepository: IUserRepository,
+    private val firstStakeBonusRepository: IFirstStakeBonusRepository
 ) : IRouteController {
 
     private val devUserId: String? = runCatching {
@@ -204,9 +206,14 @@ class ParimutuelController(
                     label = body.label
                 )
             )
-            val seedUserId = Uuid.parse("6581d391-a330-449f-9fbd-6b6e8349aff4")
-            stakeRepository.addToStake(pool.id, seedUserId, ParimutuelService.POOL_SEED_AMOUNT)
-            call.respond(HttpStatusCode.Created, ParimutuelService.POOL_SEED_AMOUNT)
+            call.respond(HttpStatusCode.Created, pool)
+        }
+
+        route.get("/stakes/bonuses") {
+            val user = resolveUser(call)
+                ?: return@get call.respond(HttpStatusCode.Unauthorized, "User not found")
+            val eventIds = firstStakeBonusRepository.getBonusEventIds(user.id)
+            call.respond(eventIds)
         }
     }
 

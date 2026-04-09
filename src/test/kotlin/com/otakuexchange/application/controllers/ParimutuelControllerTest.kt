@@ -4,6 +4,7 @@ import com.otakuexchange.domain.parimutuel.MarketPoolWithEntity
 import com.otakuexchange.domain.parimutuel.Stake
 import com.otakuexchange.domain.parimutuel.StakeWithPool
 import com.otakuexchange.domain.repositories.IUserRepository
+import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
 import com.otakuexchange.domain.services.ParimutuelService
@@ -24,25 +25,31 @@ import kotlin.uuid.Uuid
 
 class ParimutuelControllerTest {
 
-    private val parimutuelService = mockk<ParimutuelService>()
-    private val poolRepo = mockk<IMarketPoolRepository>()
-    private val stakeRepo = mockk<IStakeRepository>()
-    private val userRepo = mockk<IUserRepository>()
+    private val parimutuelService     = mockk<ParimutuelService>()
+    private val poolRepo              = mockk<IMarketPoolRepository>()
+    private val stakeRepo             = mockk<IStakeRepository>()
+    private val userRepo              = mockk<IUserRepository>()
+    private val firstStakeBonusRepo   = mockk<IFirstStakeBonusRepository>()
 
     private val clerkSub = "clerk_user_123"
-    private val userId = Uuid.parse("00000000-0000-0000-0000-000000000001")
-    private val eventId = Uuid.parse("00000000-0000-0000-0000-000000000010")
-    private val poolId = Uuid.parse("00000000-0000-0000-0000-000000000100")
-    private val now = Instant.fromEpochMilliseconds(1_700_000_000_000)
+    private val userId   = Uuid.parse("00000000-0000-0000-0000-000000000001")
+    private val eventId  = Uuid.parse("00000000-0000-0000-0000-000000000010")
+    private val poolId   = Uuid.parse("00000000-0000-0000-0000-000000000100")
+    private val now      = Instant.fromEpochMilliseconds(1_700_000_000_000)
 
     private val normalUser = User(id = userId, username = "u", email = "u@e.com", authProvider = AuthProvider.CLERK, providerUserId = clerkSub, createdAt = now)
-    private val adminUser = normalUser.copy(isAdmin = true)
-    private val token = createTestJwt(clerkSub)
+    private val adminUser  = normalUser.copy(isAdmin = true)
+    private val token      = createTestJwt(clerkSub)
 
-    private fun controller() = ParimutuelController(parimutuelService, poolRepo, stakeRepo, userRepo)
+    private fun controller() = ParimutuelController(parimutuelService, poolRepo, stakeRepo, userRepo, firstStakeBonusRepo)
 
     @BeforeEach
-    fun setUp() = clearAllMocks()
+    fun setUp() {
+        clearAllMocks()
+        coEvery { firstStakeBonusRepo.hasBonus(any(), any()) } returns false
+        coEvery { firstStakeBonusRepo.recordBonus(any(), any(), any()) } just Runs
+        coEvery { firstStakeBonusRepo.getBonusEventIds(any()) } returns emptyList()
+    }
 
     // ── Public: GET /events/{eventId}/pools ──────────────────────────────────
 

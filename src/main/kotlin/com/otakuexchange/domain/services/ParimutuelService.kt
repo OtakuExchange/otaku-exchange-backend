@@ -12,18 +12,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
+import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 
 class ParimutuelService(
     private val stakeRepository: IStakeRepository,
     private val marketPoolRepository: IMarketPoolRepository,
     private val eventRepository: IEventRepository,
-    private val userRepository: IUserRepository
+    private val userRepository: IUserRepository,
+    private val firstStakeBonusRepository: IFirstStakeBonusRepository
 ) {
 
     companion object {
-        /** Initial seed amount placed into each pool on creation, in cents.
-         *  Also used as the winner bonus pot distributed proportionally to winners. */
-        const val POOL_SEED_AMOUNT = 50000
+        const val FIRST_STAKE_BONUS_CAP = 50000  // max $500 bonus
     }
 
     // ── Payout Formula ────────────────────────────────────────────────────────
@@ -37,9 +37,8 @@ class ParimutuelService(
      * based on their share of the winning pool.
      */
     private fun calculatePayout(userStake: Int, poolTotal: Int, grandTotal: Int, multiplier: Int = 1): Int {
-        val userPoolTotal = poolTotal - POOL_SEED_AMOUNT
-        if (userPoolTotal <= 0) return 0
-        val basePayout = (userStake.toDouble() / userPoolTotal.toDouble() * (grandTotal - POOL_SEED_AMOUNT).toDouble()).toInt()
+        if (poolTotal <= 0) return 0
+        val basePayout = (userStake.toDouble() / poolTotal.toDouble() * grandTotal.toDouble()).toInt()
         val profit = basePayout - userStake
         return userStake + (profit * multiplier)
     }
@@ -56,8 +55,6 @@ class ParimutuelService(
     ): Int {
         val newPoolTotal  = currentPoolTotal + hypotheticalAmount
         val newGrandTotal = currentGrandTotal + hypotheticalAmount
-        val userPoolTotal = newPoolTotal - POOL_SEED_AMOUNT
-        if (userPoolTotal <= 0) return hypotheticalAmount
         return calculatePayout(hypotheticalAmount, newPoolTotal, newGrandTotal, multiplier)
     }
 
@@ -79,12 +76,25 @@ class ParimutuelService(
         }
         check(hasEnough) { "Insufficient balance" }
 
+        // First stake bonus — double up to $500
+        val isFirstStake = withContext(Dispatchers.IO) {
+            !firstStakeBonusRepository.hasBonus(userId, pool.eventId)
+        }
+        val bonus = if (isFirstStake) minOf(amount, FIRST_STAKE_BONUS_CAP) else 0
+        val totalAmount = amount + bonus
+
         withContext(Dispatchers.IO) {
             userRepository.subtractBalance(userId, amount.toLong())
         }
 
+        if (isFirstStake && bonus > 0) {
+            withContext(Dispatchers.IO) {
+                firstStakeBonusRepository.recordBonus(userId, pool.eventId, bonus)
+            }
+        }
+
         return withContext(Dispatchers.IO) {
-            stakeRepository.addToStake(pool.id, userId, amount)
+            stakeRepository.addToStake(pool.id, userId, totalAmount)
         }
     }
 

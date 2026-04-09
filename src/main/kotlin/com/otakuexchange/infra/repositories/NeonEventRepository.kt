@@ -19,6 +19,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
+import com.otakuexchange.infra.tables.parimutuel.FirstStakeBonusTable
 
 class NeonEventRepository : IEventRepository {
 
@@ -192,6 +193,15 @@ class NeonEventRepository : IEventRepository {
                 .singleOrNull() == null
         } else false
 
+        val isFirstStakeBonusEligible = if (currentUserId != null) {
+            FirstStakeBonusTable.selectAll()
+                .where {
+                    (FirstStakeBonusTable.eventId eq id) and
+                    (FirstStakeBonusTable.userId eq currentUserId)
+                }
+                .singleOrNull() == null
+        } else false
+
         return EventWithBookmark(
             id             = id,
             topicId        = topicId,
@@ -207,7 +217,8 @@ class NeonEventRepository : IEventRepository {
             tradeVolume    = tradeVolume,
             bookmarked     = bookmarked,
             multiplier     = multiplier,
-            isNew          = isNew
+            isNew          = isNew,
+            isFirstStakeBonusEligible = isFirstStakeBonusEligible
         )
     }
 }

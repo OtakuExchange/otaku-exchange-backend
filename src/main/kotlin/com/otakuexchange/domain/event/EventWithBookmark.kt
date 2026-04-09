@@ -22,5 +22,6 @@ data class EventWithBookmark(
     val tradeVolume: Long = 0L,
     val bookmarked: Boolean,
     val multiplier: Int = 1,
-    val isNew: Boolean = false
+    val isNew: Boolean = false,
+    val isFirstStakeBonusEligible: Boolean = false
 )
