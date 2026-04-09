@@ -90,8 +90,6 @@ class NeonSubtopicRepository : ISubtopicRepository {
                     .singleOrNull() == null
             } else false
 
-            println(isFirstStakeBonusEligible)
-
             EventWithBookmark(
                 id             = event.id,
                 topicId        = event.topicId,
@@ -107,8 +105,7 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 multiplier     = event.multiplier,
                 isNew          = isNew,
                 isFirstStakeBonusEligible = isFirstStakeBonusEligible,
-                alias          = event.alias,
-                isNew          = isNew
+                alias          = event.alias
             )
         }
     }

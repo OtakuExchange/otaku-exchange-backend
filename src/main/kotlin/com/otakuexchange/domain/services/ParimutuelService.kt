@@ -67,7 +67,7 @@ class ParimutuelService(
             marketPoolRepository.getById(marketPoolId)
         } ?: error("Market pool $marketPoolId not found")
 
-        if (eventRepository.getById(pool.eventId, null)?.status != EventStatus.open) {
+        if (eventRepository.getById(pool.eventId, null)?.status !in listOf(EventStatus.open, EventStatus.hidden)) {
             error("Event is not open for staking")
         }
 

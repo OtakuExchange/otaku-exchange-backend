@@ -222,8 +222,7 @@ class NeonEventRepository : IEventRepository {
             multiplier     = multiplier,
             isNew          = isNew,
             isFirstStakeBonusEligible = isFirstStakeBonusEligible,
-            alias          = alias,
-            isNew          = isNew,
+            alias          = alias
         )
     }
 }
