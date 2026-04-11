@@ -66,7 +66,7 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
             .join(MarketPoolTable, JoinType.INNER, StakeTable.marketPoolId, MarketPoolTable.id)
             .join(EventTable, JoinType.INNER, MarketPoolTable.eventId, EventTable.id)
             .select(StakeTable.amount.sum())
-            .where { (StakeTable.userId eq userId) and (EventTable.status neq EventStatus.resolved.name) }
+            .where { (StakeTable.userId eq userId) and (EventTable.status neq EventStatus.resolved.name) and (EventTable.status neq EventStatus.closed.name)}
             .map { it[StakeTable.amount.sum()]?.toLong() ?: 0L }
             .firstOrNull() ?: 0L
 

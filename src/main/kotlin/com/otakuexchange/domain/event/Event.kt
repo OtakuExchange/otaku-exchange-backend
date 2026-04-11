@@ -6,7 +6,7 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 enum class EventStatus {
-    open, resolved, staking_closed, hidden
+    open, resolved, staking_closed, hidden, closed
 }
 
 @Serializable
