@@ -4,6 +4,7 @@ import com.otakuexchange.domain.repositories.IEventRepository
 import com.otakuexchange.domain.event.Event
 import com.otakuexchange.domain.event.EventWithBookmark
 import com.otakuexchange.infra.tables.BookmarkTable
+import com.otakuexchange.infra.tables.EventSubtopicTable
 import com.otakuexchange.infra.tables.EventTable
 import com.otakuexchange.infra.tables.UserEventViewTable
 import com.otakuexchange.infra.tables.MarketTable
@@ -29,7 +30,14 @@ class NeonEventRepository : IEventRepository {
             .map { it.toEvent() }
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
-        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+        val subtopicIdsByEventId = subtopicIdsByEventIds(eventIds)
+        events.map {
+            it.withBookmark(
+                currentUserId = currentUserId,
+                tradeVolume = volumeByEvent[it.id] ?: 0L,
+                subtopicIds = subtopicIdsByEventId[it.id].orEmpty()
+            )
+        }
     }
 
     override suspend fun getById(id: Uuid, currentUserId: Uuid?): EventWithBookmark? = transaction {
@@ -38,7 +46,8 @@ class NeonEventRepository : IEventRepository {
             .singleOrNull()
             ?.toEvent() ?: return@transaction null
         val volume = calcVolumeByEvent(listOf(id))[id] ?: 0L
-        event.withBookmark(currentUserId, volume)
+        val subtopicIds = subtopicIdsByEventIds(listOf(id))[id].orEmpty()
+        event.withBookmark(currentUserId = currentUserId, tradeVolume = volume, subtopicIds = subtopicIds)
     }
 
     override suspend fun getNotResolvedEventsByTopicId(topicId: Uuid, currentUserId: Uuid?): List<EventWithBookmark> = transaction {
@@ -47,7 +56,14 @@ class NeonEventRepository : IEventRepository {
             .map { it.toEvent() }
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
-        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+        val subtopicIdsByEventId = subtopicIdsByEventIds(eventIds)
+        events.map {
+            it.withBookmark(
+                currentUserId = currentUserId,
+                tradeVolume = volumeByEvent[it.id] ?: 0L,
+                subtopicIds = subtopicIdsByEventId[it.id].orEmpty()
+            )
+        }
     }
 
     override suspend fun save(event: Event): Event = transaction {
@@ -100,7 +116,14 @@ class NeonEventRepository : IEventRepository {
             .map { it.toEvent() }
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
-        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+        val subtopicIdsByEventId = subtopicIdsByEventIds(eventIds)
+        events.map {
+            it.withBookmark(
+                currentUserId = currentUserId,
+                tradeVolume = volumeByEvent[it.id] ?: 0L,
+                subtopicIds = subtopicIdsByEventId[it.id].orEmpty()
+            )
+        }
     }
 
     override suspend fun getRecentlyResolvedEvents(currentUserId: Uuid?): List<EventWithBookmark> = transaction {
@@ -110,7 +133,14 @@ class NeonEventRepository : IEventRepository {
             .map { it.toEvent() }
         val eventIds = events.map { it.id }
         val volumeByEvent = calcVolumeByEvent(eventIds)
-        events.map { it.withBookmark(currentUserId, volumeByEvent[it.id] ?: 0L) }
+        val subtopicIdsByEventId = subtopicIdsByEventIds(eventIds)
+        events.map {
+            it.withBookmark(
+                currentUserId = currentUserId,
+                tradeVolume = volumeByEvent[it.id] ?: 0L,
+                subtopicIds = subtopicIdsByEventId[it.id].orEmpty()
+            )
+        }
     }
 
     override suspend fun getOpenEventsPastCloseTime(): List<Event> = transaction {
@@ -175,6 +205,18 @@ class NeonEventRepository : IEventRepository {
         }
     }
 
+    private fun subtopicIdsByEventIds(eventIds: List<Uuid>): Map<Uuid, List<Uuid>> {
+        if (eventIds.isEmpty()) return emptyMap()
+        return EventSubtopicTable
+            .selectAll()
+            .where { EventSubtopicTable.eventId inList eventIds }
+            .groupBy(
+                { it[EventSubtopicTable.eventId] },
+                { it[EventSubtopicTable.subtopicId] }
+            )
+            .mapValues { (_, subtopicIds) -> subtopicIds.distinct() }
+    }
+
     override suspend fun markEventSeen(userId: Uuid, eventId: Uuid): Unit = transaction {
         UserEventViewTable.upsert {
             it[UserEventViewTable.userId]   = userId
@@ -183,7 +225,11 @@ class NeonEventRepository : IEventRepository {
         }
     }
 
-    private fun Event.withBookmark(currentUserId: Uuid?, tradeVolume: Long = 0L): EventWithBookmark {
+    private fun Event.withBookmark(
+        currentUserId: Uuid?,
+        tradeVolume: Long = 0L,
+        subtopicIds: List<Uuid> = emptyList()
+    ): EventWithBookmark {
         val bookmarked = if (currentUserId != null) {
             BookmarkTable.selectAll()
                 .where { (BookmarkTable.eventId eq id) and (BookmarkTable.userId eq currentUserId) }
@@ -222,7 +268,8 @@ class NeonEventRepository : IEventRepository {
             multiplier     = multiplier,
             isNew          = isNew,
             isFirstStakeBonusEligible = isFirstStakeBonusEligible,
-            alias          = alias
+            alias          = alias,
+            subtopicIds    = subtopicIds
         )
     }
 }
