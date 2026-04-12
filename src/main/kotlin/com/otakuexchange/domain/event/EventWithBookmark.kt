@@ -24,5 +24,6 @@ data class EventWithBookmark(
     val alias: String? = null,
     val multiplier: Int = 1,
     val isNew: Boolean = false,
-    val isFirstStakeBonusEligible: Boolean = false
+    val isFirstStakeBonusEligible: Boolean = false,
+    val subtopicIds: List<Uuid> = emptyList()
 )

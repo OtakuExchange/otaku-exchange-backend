@@ -111,7 +111,9 @@ class EventController(
             val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
             eventRepository.markEventSeen(user.id, eventId)
-            call.respond(HttpStatusCode.NoContent)
+            val updated = eventRepository.getById(eventId, user.id)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
+            call.respond(updated)
         }
 
         route.post("/events/{id}/comments") {
@@ -168,8 +170,13 @@ class EventController(
             val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
             val added = bookmarkRepository.addBookmark(user.id, eventId)
-            if (added) call.respond(HttpStatusCode.NoContent)
-            else call.respond(HttpStatusCode.Conflict, "Already bookmarked")
+            if (!added) {
+                call.respond(HttpStatusCode.Conflict, "Already bookmarked")
+                return@post
+            }
+            val updated = eventRepository.getById(eventId, user.id)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Event not found")
+            call.respond(updated)
         }
 
         route.delete("/events/{id}/bookmark") {
@@ -182,15 +189,25 @@ class EventController(
             val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
                 ?: return@delete call.respond(HttpStatusCode.Unauthorized, "User not found")
             val removed = bookmarkRepository.removeBookmark(user.id, eventId)
-            if (removed) call.respond(HttpStatusCode.NoContent)
-            else call.respond(HttpStatusCode.NotFound, "Bookmark not found")
+            if (!removed) {
+                call.respond(HttpStatusCode.NotFound, "Bookmark not found")
+                return@delete
+            }
+            val updated = eventRepository.getById(eventId, user.id)
+                ?: return@delete call.respond(HttpStatusCode.NotFound, "Event not found")
+            call.respond(updated)
         }
 
         route.post("/events") {
             val event = call.receive<Event>()
+            val user = userRepository.findByProviderUserId(call.clerkUserId, AuthProvider.CLERK)
+                ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
+
             val saved = eventRepository.save(event.copy(name = event.name.trim(), alias = event.alias?.trim()))
             if (saved.status == EventStatus.open || saved.status == EventStatus.hidden) scheduler.schedule(saved)
-            call.respond(HttpStatusCode.Created, saved)
+            val hydrated = eventRepository.getById(saved.id, user.id)
+                ?: return@post call.respond(HttpStatusCode.InternalServerError, "Failed to load created event")
+            call.respond(HttpStatusCode.Created, hydrated)
         }
 
         route.put("/events/{id}") {
@@ -259,8 +276,13 @@ class EventController(
                 scheduler.cancel(id)
             }
 
-            if (updated) call.respond(HttpStatusCode.NoContent)
-            else call.respond(HttpStatusCode.NotFound, "Event not found")
+            if (!updated) {
+                call.respond(HttpStatusCode.NotFound, "Event not found")
+                return@patch
+            }
+            val hydrated = eventRepository.getById(id, user.id)
+                ?: return@patch call.respond(HttpStatusCode.InternalServerError, "Failed to load updated event")
+            call.respond(hydrated)
         }
     }
 }
