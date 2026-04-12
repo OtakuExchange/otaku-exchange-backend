@@ -74,6 +74,7 @@ class NeonSubtopicRepositoryTest {
         val noUser = repo.getEventsBySubtopicId(subtopicId, currentUserId = null)
         assertEquals(setOf(eventId), noUser.map { it.id }.toSet())
         assertEquals(false, noUser.single().bookmarked)
+        assertEquals(listOf(subtopicId), noUser.single().subtopicIds)
 
         Seed.bookmark(
             db,
@@ -83,6 +84,7 @@ class NeonSubtopicRepositoryTest {
         )
         val withUser = repo.getEventsBySubtopicId(subtopicId, currentUserId = userId)
         assertEquals(true, withUser.single().bookmarked)
+        assertEquals(listOf(subtopicId), withUser.single().subtopicIds)
 
         repo.removeEventFromSubtopic(eventId, subtopicId)
         val after = repo.getEventsBySubtopicId(subtopicId, currentUserId = userId)

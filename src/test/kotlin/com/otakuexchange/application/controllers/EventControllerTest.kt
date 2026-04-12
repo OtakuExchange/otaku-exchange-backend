@@ -182,12 +182,14 @@ class EventControllerTest {
     fun addBookmark_returns204() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns user
         coEvery { bookmarkRepo.addBookmark(userId, eventId) } returns true
+        coEvery { eventRepo.getById(eventId, userId) } returns event().copy(bookmarked = true)
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.post("/events/$eventId/bookmark") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
-            assertEquals(HttpStatusCode.NoContent, res.status)
+            assertEquals(HttpStatusCode.OK, res.status)
+            assertTrue(res.bodyAsText().contains("\"bookmarked\":true"))
         }
     }
 
@@ -210,12 +212,14 @@ class EventControllerTest {
     fun removeBookmark_returns204() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns user
         coEvery { bookmarkRepo.removeBookmark(userId, eventId) } returns true
+        coEvery { eventRepo.getById(eventId, userId) } returns event().copy(bookmarked = false)
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.delete("/events/$eventId/bookmark") {
                 header(HttpHeaders.Authorization, "Bearer $token")
             }
-            assertEquals(HttpStatusCode.NoContent, res.status)
+            assertEquals(HttpStatusCode.OK, res.status)
+            assertTrue(res.bodyAsText().contains("\"bookmarked\":false"))
         }
     }
 
@@ -267,6 +271,7 @@ class EventControllerTest {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns adminUser
         coEvery { eventRepo.updateStatus(eventId, "open") } returns true
         coEvery { eventRepo.getById(eventId, null) } returns event()
+        coEvery { eventRepo.getById(eventId, userId) } returns event().copy(status = EventStatus.open)
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.patch("/events/$eventId/status") {
@@ -274,7 +279,8 @@ class EventControllerTest {
                 contentType(ContentType.Application.Json)
                 setBody("""{"status":"open"}""")
             }
-            assertEquals(HttpStatusCode.NoContent, res.status)
+            assertEquals(HttpStatusCode.OK, res.status)
+            assertTrue(res.bodyAsText().contains("\"status\":\"open\""))
         }
     }
 

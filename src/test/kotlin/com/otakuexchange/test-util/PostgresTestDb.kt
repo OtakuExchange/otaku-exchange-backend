@@ -13,6 +13,7 @@ import com.otakuexchange.infra.tables.UserEventViewTable
 import com.otakuexchange.infra.tables.UserTable
 import com.otakuexchange.infra.tables.parimutuel.MarketPoolTable
 import com.otakuexchange.infra.tables.parimutuel.StakeTable
+import com.otakuexchange.infra.tables.parimutuel.FirstStakeBonusTable
 import com.otakuexchange.infra.tables.DailyStreakTable
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
@@ -45,6 +46,7 @@ object PostgresTestDb {
                 MarketTable,
                 MarketPoolTable,
                 StakeTable,
+                FirstStakeBonusTable,
                 DailyStreakTable
             )
         }
@@ -61,6 +63,7 @@ object PostgresTestDb {
                   bookmarks,
                   user_event_views,
                   stakes,
+                  first_stake_bonuses,
                   market_pools,
                   entities,
                   event_subtopics,

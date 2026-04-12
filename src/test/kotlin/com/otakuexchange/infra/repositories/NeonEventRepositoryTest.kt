@@ -82,6 +82,7 @@ class NeonEventRepositoryTest {
         val loaded = repo.getById(eventId, currentUserId = userId)
         assertNotNull(loaded)
         assertEquals(true, loaded.bookmarked)
+        assertEquals(emptyList(), loaded.subtopicIds)
     }
 
     @Test
@@ -103,6 +104,8 @@ class NeonEventRepositoryTest {
         assertEquals(setOf(e1, e2), events.map { it.id }.toSet())
         assertEquals(true, events.single { it.id == e1 }.bookmarked)
         assertEquals(false, events.single { it.id == e2 }.bookmarked)
+        assertEquals(emptyList(), events.single { it.id == e1 }.subtopicIds)
+        assertEquals(emptyList(), events.single { it.id == e2 }.subtopicIds)
     }
 
     @Test
@@ -139,8 +142,9 @@ class NeonEventRepositoryTest {
         val recentId = Uuid.parse("00000000-0000-0000-0000-000000033000")
         val oldId = Uuid.parse("00000000-0000-0000-0000-000000033001")
 
-        Seed.event(db, id = recentId, topicId = topicId, status = "RESOLVED", closeTime = now - 2.days)
-        Seed.event(db, id = oldId, topicId = topicId, status = "RESOLVED", closeTime = now - 30.days)
+        // Contract: repository filters by status == EventStatus.resolved.name ("resolved") AND closeTime within last 7 days.
+        Seed.event(db, id = recentId, topicId = topicId, status = "resolved", closeTime = now - 2.days)
+        Seed.event(db, id = oldId, topicId = topicId, status = "resolved", closeTime = now - 30.days)
 
         val resolved = repo.getRecentlyResolvedEvents(currentUserId = null)
         assertEquals(setOf(recentId), resolved.map { it.id }.toSet())
