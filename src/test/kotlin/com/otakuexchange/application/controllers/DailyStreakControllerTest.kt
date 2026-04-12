@@ -17,11 +17,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.repositories.IBalanceTransactionRepository
 
 class DailyStreakControllerTest {
 
     private val streakRepo = mockk<IDailyStreakRepository>()
     private val userRepo = mockk<IUserRepository>()
+    private val balanceTransactionRepo = mockk<IBalanceTransactionRepository>()
 
     private val clerkSub = "clerk_streak_user"
     private val userId = Uuid.parse("00000000-0000-0000-0000-000000000001")
@@ -30,10 +32,14 @@ class DailyStreakControllerTest {
     private val user = User(id = userId, username = "u", email = "u@e.com", authProvider = AuthProvider.CLERK, providerUserId = clerkSub, createdAt = now)
     private val token = createTestJwt(clerkSub)
 
-    private fun controller() = DailyStreakController(streakRepo, userRepo)
+    private fun controller() = DailyStreakController(streakRepo, userRepo, balanceTransactionRepo)
 
     @BeforeEach
-    fun setUp() = clearAllMocks()
+    fun setUp() {
+        clearAllMocks()
+        coEvery { balanceTransactionRepo.record(any(), any(), any(), any(), anyNullable()) } returns mockk()
+        coEvery { userRepo.findById(any()) } returns user
+    }
 
     // ── GET /rewards/daily ──────────────────────────────────────────────────
 

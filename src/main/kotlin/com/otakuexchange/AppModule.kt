@@ -54,6 +54,9 @@ import com.otakuexchange.application.controllers.DailyStreakController
 import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 import com.otakuexchange.infra.repositories.parimutuel.NeonFirstStakeBonusRepository
 
+import com.otakuexchange.domain.repositories.IBalanceTransactionRepository
+import com.otakuexchange.infra.repositories.NeonBalanceTransactionRepository
+
 import org.koin.core.qualifier.named
 
 val appModule = module {
@@ -72,6 +75,7 @@ val appModule = module {
     single<IRankRepository> { NeonRankRepository() }
     single<IPositionRepository> { NeonPositionRepository() }
     single<IDailyStreakRepository> { NeonDailyStreakRepository() }
+    single<IBalanceTransactionRepository> { NeonBalanceTransactionRepository() }
 
     // Parimutuel repositories
     single<IMarketPoolRepository>  { NeonMarketPoolRepository() }
@@ -88,7 +92,8 @@ val appModule = module {
             marketPoolRepository  = get(),
             eventRepository       = get(),
             userRepository        = get(),
-            firstStakeBonusRepository = get()
+            firstStakeBonusRepository = get(),
+            balanceTransactionRepository = get()
         )
     }
 
@@ -102,6 +107,6 @@ val appModule = module {
     single<IRouteController>(named("rankController")) { RankController(get()) }
     single<IRouteController>(named("adminController")) { AdminController(get(), get(), get(), get()) }
     single<IRouteController>(named("stakeController")) { ParimutuelController(get(), get(), get(), get(), get()) }
-    single<IRouteController>(named("dailyStreakController")) { DailyStreakController(get(), get()) }
+    single<IRouteController>(named("dailyStreakController")) { DailyStreakController(get(), get(), get()) }
     single<IRouteController>(named("entityController")) { EntityController(get(), get()) }
 }

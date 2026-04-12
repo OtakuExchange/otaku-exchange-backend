@@ -9,6 +9,7 @@ import com.otakuexchange.domain.repositories.IUserRepository
 import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 import com.otakuexchange.domain.repositories.parimutuel.IMarketPoolRepository
 import com.otakuexchange.domain.repositories.parimutuel.IStakeRepository
+import com.otakuexchange.domain.repositories.IBalanceTransactionRepository
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -25,6 +26,7 @@ class ParimutuelServiceTest {
     private val eventRepo           = mockk<IEventRepository>()
     private val userRepo            = mockk<IUserRepository>()
     private val firstStakeBonusRepo = mockk<IFirstStakeBonusRepository>()
+    private val balanceTransactionRepo = mockk<IBalanceTransactionRepository>()
     private lateinit var service: ParimutuelService
 
     private val userId  = Uuid.parse("00000000-0000-0000-0000-000000000001")
@@ -45,9 +47,11 @@ class ParimutuelServiceTest {
     @BeforeEach
     fun setUp() {
         clearAllMocks()
-        service = ParimutuelService(stakeRepo, poolRepo, eventRepo, userRepo, firstStakeBonusRepo)
-        coEvery { firstStakeBonusRepo.hasBonus(any(), any()) } returns true  // no bonus by default
+        service = ParimutuelService(stakeRepo, poolRepo, eventRepo, userRepo, firstStakeBonusRepo, balanceTransactionRepo)
+        coEvery { firstStakeBonusRepo.hasBonus(any(), any()) } returns true
         coEvery { firstStakeBonusRepo.recordBonus(any(), any(), any()) } just Runs
+        coEvery { balanceTransactionRepo.record(any(), any(), any(), any(), anyNullable()) } returns mockk()
+        coEvery { userRepo.findById(any()) } returns mockk(relaxed = true)
     }
 
     // ── placeStake ──────────────────────────────────────────────────────────

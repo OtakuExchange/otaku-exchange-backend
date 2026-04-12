@@ -13,13 +13,16 @@ import kotlinx.coroutines.withContext
 import kotlin.uuid.Uuid
 import com.otakuexchange.domain.event.EventStatus
 import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
+import com.otakuexchange.domain.repositories.IBalanceTransactionRepository
+import com.otakuexchange.domain.BalanceTransactionType
 
 class ParimutuelService(
     private val stakeRepository: IStakeRepository,
     private val marketPoolRepository: IMarketPoolRepository,
     private val eventRepository: IEventRepository,
     private val userRepository: IUserRepository,
-    private val firstStakeBonusRepository: IFirstStakeBonusRepository
+    private val firstStakeBonusRepository: IFirstStakeBonusRepository,
+    private val balanceTransactionRepository: IBalanceTransactionRepository
 ) {
 
     companion object {
@@ -188,6 +191,16 @@ class ParimutuelService(
                         launch(Dispatchers.IO) {
                             val payout = calculatePayout(stake.amount, winningPool.amount, grandTotal, multiplier)
                             userRepository.addBalance(stake.userId, payout.toLong())
+                            val updatedUser = userRepository.findById(stake.userId)
+                            if (updatedUser != null) {
+                                balanceTransactionRepository.record(
+                                    userId       = stake.userId,
+                                    amount       = payout.toLong(),
+                                    balanceAfter = updatedUser.balance,
+                                    type         = BalanceTransactionType.EVENT_PAYOUT,
+                                    referenceId  = eventId
+                                )
+                            }
                         }
                     }
                 }
