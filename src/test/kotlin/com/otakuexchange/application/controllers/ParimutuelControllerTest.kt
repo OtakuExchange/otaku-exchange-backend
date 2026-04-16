@@ -22,6 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import com.otakuexchange.domain.parimutuel.MarketPool
 
 class ParimutuelControllerTest {
 
@@ -114,8 +115,16 @@ class ParimutuelControllerTest {
     @Test
     fun postStake_happyPath_returns201() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns normalUser
+
+        // NEW: mock the multi-pool conflict check
+        val pool = MarketPool(id = poolId, eventId = eventId, label = "A")
+        coEvery { poolRepo.getById(poolId) } returns pool
+        coEvery { poolRepo.getByEventId(eventId) } returns listOf(pool)
+        coEvery { stakeRepo.findByUserAndPool(userId, any()) } returns null
+
         val stake = Stake(userId = userId, marketPoolId = poolId, amount = 100, createdAt = now, updatedAt = now)
         coEvery { parimutuelService.placeStake(userId, poolId, 100) } returns stake
+
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.post("/stakes") {
@@ -144,7 +153,16 @@ class ParimutuelControllerTest {
     @Test
     fun postStake_insufficientBalance_returns402() {
         coEvery { userRepo.findByProviderUserId(clerkSub, AuthProvider.CLERK) } returns normalUser
-        coEvery { parimutuelService.placeStake(userId, poolId, 100) } throws IllegalStateException("Insufficient balance")
+
+        // NEW: mock the multi-pool conflict check
+        val pool = MarketPool(id = poolId, eventId = eventId, label = "A")
+        coEvery { poolRepo.getById(poolId) } returns pool
+        coEvery { poolRepo.getByEventId(eventId) } returns listOf(pool)
+        coEvery { stakeRepo.findByUserAndPool(userId, any()) } returns null
+
+        coEvery { parimutuelService.placeStake(userId, poolId, 100) } throws
+            IllegalStateException("Insufficient balance")
+
         val c = controller()
         testApp(protectedRoutes = { c.registerProtectedRoutes(this) }) { client ->
             val res = client.post("/stakes") {

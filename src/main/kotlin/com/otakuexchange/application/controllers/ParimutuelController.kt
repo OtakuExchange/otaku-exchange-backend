@@ -149,11 +149,21 @@ class ParimutuelController(
         route.post("/stakes") {
             val user = resolveUser(call)
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
-
             val body = call.receive<PlaceStakeRequest>()
             if (body.amount <= 0) {
                 call.respond(HttpStatusCode.BadRequest, "amount must be > 0")
                 return@post
+            }
+
+            // Prevent staking on multiple pools in the same event
+            val pool = marketPoolRepository.getById(body.marketPoolId)
+                ?: return@post call.respond(HttpStatusCode.NotFound, "Pool not found")
+            val eventPools = marketPoolRepository.getByEventId(pool.eventId)
+            val existingStake = eventPools
+                .filter { it.id != body.marketPoolId }
+                .any { otherPool -> stakeRepository.findByUserAndPool(user.id, otherPool.id) != null }
+            if (existingStake) {
+                return@post call.respond(HttpStatusCode.Conflict, "You have already staked on a different pool in this event")
             }
 
             val stake = runCatching {
@@ -161,10 +171,9 @@ class ParimutuelController(
             }.getOrElse { e ->
                 val msg    = e.message ?: "Failed to place stake"
                 val status = if (msg == "Insufficient balance") HttpStatusCode.PaymentRequired
-                             else HttpStatusCode.BadRequest
+                            else HttpStatusCode.BadRequest
                 return@post call.respond(status, msg)
             }
-
             call.respond(HttpStatusCode.Created, stake)
         }
 

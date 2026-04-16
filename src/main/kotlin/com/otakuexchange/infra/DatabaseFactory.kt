@@ -30,13 +30,14 @@ object DatabaseFactory {
             jdbcUrl = url
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = maxPoolSize
-            minimumIdle = minIdle
+            minimumIdle = 0                    // Allow pool to drain fully when idle
             connectionTimeout = 10_000
-            idleTimeout = 600_000
-            keepaliveTime = 60_000
+            idleTimeout = 300_000              // Evict idle connections after 5 min
+            maxLifetime = 900_000              // Recycle connections every 15 min
+            keepaliveTime = 0                  // DISABLE keepalives — kills Neon billing
             isAutoCommit = false
             poolName = "OtakuExchangeHikari"
-        }).also { dataSource = it }
+        })
 
         Database.connect(ds)
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
