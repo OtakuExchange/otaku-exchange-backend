@@ -226,7 +226,7 @@ object Seed {
         entityId: Uuid? = null,
         label: String,
         isWinner: Boolean = false,
-        amount: Int = 0,
+        amount: Long = 0L,
         createdAt: Instant = fixedInstant,
         updatedAt: Instant = fixedInstant
     ): Uuid = transaction(db) {
@@ -248,7 +248,7 @@ object Seed {
         id: Uuid,
         userId: Uuid,
         marketPoolId: Uuid,
-        amount: Int,
+        amount: Long,
         createdAt: Instant = fixedInstant,
         updatedAt: Instant = fixedInstant
     ): Uuid = transaction(db) {
@@ -263,7 +263,7 @@ object Seed {
         id
     }
 
-    fun setPoolAmount(db: Database, marketPoolId: Uuid, amount: Int) {
+    fun setPoolAmount(db: Database, marketPoolId: Uuid, amount: Long) {
         transaction(db) {
             MarketPoolTable.update({ MarketPoolTable.id eq marketPoolId }) {
                 it[MarketPoolTable.amount] = amount
@@ -271,7 +271,7 @@ object Seed {
         }
     }
 
-    fun poolAmount(db: Database, marketPoolId: Uuid): Int = transaction(db) {
+    fun poolAmount(db: Database, marketPoolId: Uuid): Long = transaction(db) {
         MarketPoolTable.selectAll()
             .where { MarketPoolTable.id eq marketPoolId }
             .single()[MarketPoolTable.amount]

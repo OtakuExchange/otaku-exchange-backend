@@ -12,7 +12,7 @@ data class StakeWithUser(
     val avatarUrl: String? = null,
     val marketPoolId: Uuid,
     val poolLabel: String,
-    val amount: Int,
+    val amount: Long,
     val createdAt: Instant,
     val updatedAt: Instant
 )

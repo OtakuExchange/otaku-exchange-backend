@@ -56,7 +56,7 @@ class NeonStakeRepository : IStakeRepository {
      * Upserts the stake and increments the pool total in one transaction so
      * pool.amount is always consistent with the sum of its stakes.
      */
-    override suspend fun addToStake(marketPoolId: Uuid, userId: Uuid, amount: Int): Stake = transaction {
+    override suspend fun addToStake(marketPoolId: Uuid, userId: Uuid, amount: Long): Stake = transaction {
         val now = Clock.System.now()
 
         // Increment pool total

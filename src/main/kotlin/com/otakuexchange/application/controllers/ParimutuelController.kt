@@ -21,7 +21,7 @@ import com.otakuexchange.domain.event.EventStatus
 import com.otakuexchange.domain.repositories.parimutuel.IFirstStakeBonusRepository
 
 @Serializable
-data class PlaceStakeRequest(val marketPoolId: Uuid, val amount: Int)
+data class PlaceStakeRequest(val marketPoolId: Uuid, val amount: Long)
 
 @Serializable
 data class ResolveEventRequest(val winningPoolId: Uuid)
@@ -80,9 +80,9 @@ class ParimutuelController(
         route.get("/events/{eventId}/pools/{poolId}/preview") {
             val eventId = parseUuid(call, "eventId") ?: return@get
             val poolId  = parseUuid(call, "poolId")  ?: return@get
-            val amount  = call.request.queryParameters["amount"]?.toIntOrNull() ?: 100
+            val amount = call.request.queryParameters["amount"]?.toLongOrNull() ?: 100L
 
-            if (amount <= 0) {
+            if (amount <= 0L) {
                 call.respond(HttpStatusCode.BadRequest, "amount must be > 0")
                 return@get
             }
@@ -150,7 +150,7 @@ class ParimutuelController(
             val user = resolveUser(call)
                 ?: return@post call.respond(HttpStatusCode.Unauthorized, "User not found")
             val body = call.receive<PlaceStakeRequest>()
-            if (body.amount <= 0) {
+            if (body.amount <= 0L) {
                 call.respond(HttpStatusCode.BadRequest, "amount must be > 0")
                 return@post
             }

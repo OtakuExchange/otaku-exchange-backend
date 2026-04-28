@@ -10,7 +10,7 @@ interface IMarketPoolRepository {
     suspend fun getById(id: Uuid): MarketPool?
     suspend fun create(marketPool: MarketPool): MarketPool
     suspend fun update(marketPool: MarketPool): MarketPool
-    suspend fun addToPool(id: Uuid, amount: Int): MarketPool
+    suspend fun addToPool(id: Uuid, amount: Long): MarketPool
     suspend fun markWinner(id: Uuid): MarketPool
     suspend fun delete(id: Uuid): Boolean
 }

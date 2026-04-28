@@ -9,7 +9,7 @@ object StakeTable : Table("stakes") {
     val id            = uuid("id")
     val userId        = uuid("user_id").references(UserTable.id, onDelete = ReferenceOption.CASCADE).index()
     val marketPoolId  = uuid("market_pool_id").references(MarketPoolTable.id, onDelete = ReferenceOption.CASCADE).index()
-    val amount        = integer("amount").default(0)   // total cents this user has staked
+    val amount        = long("amount").default(0)   // total cents this user has staked
     val createdAt     = timestamp("created_at")
     val updatedAt     = timestamp("updated_at")
 

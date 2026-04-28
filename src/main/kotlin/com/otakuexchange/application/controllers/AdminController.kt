@@ -2,7 +2,6 @@ package com.otakuexchange.application.controllers
 
 import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.market.OrderSide
-import com.otakuexchange.domain.services.MarketSeederService
 import com.otakuexchange.domain.repositories.IMarketRepository
 import com.otakuexchange.domain.repositories.IPositionRepository
 import com.otakuexchange.domain.repositories.IUserRepository
@@ -32,7 +31,6 @@ data class ResolveRequest(
 )
 
 class AdminController(
-    private val marketSeederService: MarketSeederService,
     private val marketRepository: IMarketRepository,
     private val positionRepository: IPositionRepository,
     private val userRepository: IUserRepository
@@ -55,35 +53,6 @@ class AdminController(
     override fun registerRoutes(route: Route) { }
 
     override fun registerProtectedRoutes(route: Route) {
-
-        // ── Seed a market ─────────────────────────────────────────────────────
-        route.post("/admin/markets/{id}/seed") {
-            resolveAdmin(call) ?: return@post call.respond(HttpStatusCode.Forbidden, "Admin access required")
-
-            val marketId = try { Uuid.parse(call.parameters["id"] ?: "") }
-            catch (e: Exception) { call.respond(HttpStatusCode.BadRequest, "Invalid market id"); return@post }
-
-            val req = call.receive<SeedRequest>()
-
-            if (req.midpoint !in 1..99) {
-                call.respond(HttpStatusCode.BadRequest, "midpoint must be between 1 and 99")
-                return@post
-            }
-            if (req.levels !in 1..20) {
-                call.respond(HttpStatusCode.BadRequest, "levels must be between 1 and 20")
-                return@post
-            }
-
-            val quantities = req.quantities?.toIntArray() ?: MarketSeederService.DEFAULT_QUANTITIES
-            marketSeederService.seed(
-                marketId = marketId,
-                midpoint = req.midpoint,
-                levels = req.levels,
-                quantities = quantities,
-                useLastPrice = req.useLastPrice
-            )
-            call.respond(HttpStatusCode.OK, "Market $marketId seeded successfully")
-        }
 
         // ── Resolve a market ──────────────────────────────────────────────────
         route.post("/admin/markets/{id}/resolve") {

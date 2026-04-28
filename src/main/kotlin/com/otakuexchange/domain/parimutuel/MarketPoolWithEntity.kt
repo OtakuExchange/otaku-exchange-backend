@@ -13,7 +13,7 @@ data class MarketPoolWithEntity(
     val entity: Entity? = null,
     val label: String,
     val isWinner: Boolean = false,
-    val amount: Int = 0,
+    val amount: Long = 0L,
     val volume: Long = 0L,
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = Clock.System.now()

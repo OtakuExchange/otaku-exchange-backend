@@ -12,7 +12,7 @@ data class StakeWithPool(
     val marketPoolId: Uuid,
     val label: String,
     val entity: Entity? = null,
-    val amount: Int,
+    val amount: Long,
     val createdAt: Instant,
     val updatedAt: Instant
 )

@@ -77,7 +77,7 @@ class NeonMarketPoolRepository : IMarketPoolRepository {
         marketPool
     }
 
-    override suspend fun addToPool(id: Uuid, amount: Int): MarketPool = transaction {
+    override suspend fun addToPool(id: Uuid, amount: Long): MarketPool = transaction {
         MarketPoolTable.update({ MarketPoolTable.id eq id }) {
             it[MarketPoolTable.amount]    = MarketPoolTable.amount + amount
             it[MarketPoolTable.updatedAt] = Clock.System.now()

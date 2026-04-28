@@ -26,45 +26,29 @@ class ParimutuelService(
 ) {
 
     companion object {
-        const val FIRST_STAKE_BONUS_CAP = 50000  // max $500 bonus
+        const val FIRST_STAKE_BONUS_CAP = 50000L  // max $500 bonus
     }
 
-    // ── Payout Formula ────────────────────────────────────────────────────────
-
-    /**
-     * Core parimutuel payout formula.
-     *
-     * payout = (userStake / poolTotal) * (grandTotal + POOL_SEED_AMOUNT)
-     *
-     * The POOL_SEED_AMOUNT bonus is distributed proportionally to winners
-     * based on their share of the winning pool.
-     */
-    private fun calculatePayout(userStake: Int, poolTotal: Int, grandTotal: Int, multiplier: Int = 1): Int {
-        if (poolTotal <= 0) return 0
-        val basePayout = (userStake.toDouble() / poolTotal.toDouble() * grandTotal.toDouble()).toInt()
+    private fun calculatePayout(userStake: Long, poolTotal: Long, grandTotal: Long, multiplier: Int = 1): Long {
+        if (poolTotal <= 0L) return 0L
+        val basePayout = (userStake.toDouble() / poolTotal.toDouble() * grandTotal.toDouble()).toLong()
         val profit = basePayout - userStake
         return userStake + (profit * multiplier)
     }
 
-    /**
-     * Hypothetical payout preview formula — includes the hypothetical stake
-     * in both the pool total and grand total before calculating.
-     */
     private fun calculatePreviewPayout(
-        hypotheticalAmount: Int,
-        currentPoolTotal: Int,
-        currentGrandTotal: Int,
+        hypotheticalAmount: Long,
+        currentPoolTotal: Long,
+        currentGrandTotal: Long,
         multiplier: Int = 1
-    ): Int {
+    ): Long {
         val newPoolTotal  = currentPoolTotal + hypotheticalAmount
         val newGrandTotal = currentGrandTotal + hypotheticalAmount
         return calculatePayout(hypotheticalAmount, newPoolTotal, newGrandTotal, multiplier)
     }
 
-    // ── Staking ───────────────────────────────────────────────────────────────
-
-    suspend fun placeStake(userId: Uuid, marketPoolId: Uuid, amount: Int): Stake {
-        require(amount > 0) { "Stake amount must be greater than 0" }
+    suspend fun placeStake(userId: Uuid, marketPoolId: Uuid, amount: Long): Stake {
+        require(amount > 0L) { "Stake amount must be greater than 0" }
 
         val pool = withContext(Dispatchers.IO) {
             marketPoolRepository.getById(marketPoolId)
@@ -75,22 +59,21 @@ class ParimutuelService(
         }
 
         val hasEnough = withContext(Dispatchers.IO) {
-            userRepository.hasBalance(userId, amount.toLong())
+            userRepository.hasBalance(userId, amount)
         }
         check(hasEnough) { "Insufficient balance" }
 
-        // First stake bonus — double up to $500
         val isFirstStake = withContext(Dispatchers.IO) {
             !firstStakeBonusRepository.hasBonus(userId, pool.eventId)
         }
-        val bonus = if (isFirstStake) minOf(amount, FIRST_STAKE_BONUS_CAP) else 0
+        val bonus = if (isFirstStake) minOf(amount, FIRST_STAKE_BONUS_CAP) else 0L
         val totalAmount = amount + bonus
 
         withContext(Dispatchers.IO) {
-            userRepository.subtractBalance(userId, amount.toLong())
+            userRepository.subtractBalance(userId, amount)
         }
 
-        if (isFirstStake && bonus > 0) {
+        if (isFirstStake && bonus > 0L) {
             withContext(Dispatchers.IO) {
                 firstStakeBonusRepository.recordBonus(userId, pool.eventId, bonus)
             }
@@ -101,9 +84,7 @@ class ParimutuelService(
         }
     }
 
-    // ── Payout Preview ────────────────────────────────────────────────────────
-
-    suspend fun getPayoutPreview(eventId: Uuid, marketPoolId: Uuid, hypotheticalAmount: Int): Int {
+    suspend fun getPayoutPreview(eventId: Uuid, marketPoolId: Uuid, hypotheticalAmount: Long): Long {
         val pools = withContext(Dispatchers.IO) {
             marketPoolRepository.getByEventId(eventId)
         }
@@ -111,40 +92,27 @@ class ParimutuelService(
             ?: error("Pool $marketPoolId not found in event $eventId")
 
         val grandTotal = pools.sumOf { it.amount }
-
         val multiplier = eventRepository.getEventMultiplier(eventId)
 
         return calculatePreviewPayout(hypotheticalAmount, targetPool.amount, grandTotal, multiplier)
     }
 
-    // ── Current Payout ────────────────────────────────────────────────────────
-
-    suspend fun getCurrentPayout(userId: Uuid, marketPoolId: Uuid): Int {
+    suspend fun getCurrentPayout(userId: Uuid, marketPoolId: Uuid): Long {
         val pool = withContext(Dispatchers.IO) {
             marketPoolRepository.getById(marketPoolId)
         } ?: error("Pool $marketPoolId not found")
 
         val stake = withContext(Dispatchers.IO) {
             stakeRepository.findByUserAndPool(userId, marketPoolId)
-        } ?: return 0
+        } ?: return 0L
 
         val pools      = withContext(Dispatchers.IO) { marketPoolRepository.getByEventId(pool.eventId) }
         val grandTotal = pools.sumOf { it.amount }
-
         val multiplier = eventRepository.getEventMultiplier(pool.eventId)
 
         return calculatePayout(stake.amount, pool.amount, grandTotal, multiplier)
     }
 
-    // ── Resolution ────────────────────────────────────────────────────────────
-
-    /**
-     * Resolves an event:
-     *   1. Marks [winningPoolId] as the winner.
-     *   2. Sets the event status to resolved.
-     *   3. Pays out the entire grand total + POOL_SEED_AMOUNT bonus proportionally
-     *      to all winning stakers based on their share of the winning pool.
-     */
     suspend fun resolveEvent(eventId: Uuid, winningPoolId: Uuid) {
         val pools = withContext(Dispatchers.IO) {
             marketPoolRepository.getByEventId(eventId)
@@ -185,17 +153,17 @@ class ParimutuelService(
                 )
             }
 
-            if (winningPool.amount > 0 && grandTotal > 0) {
+            if (winningPool.amount > 0L && grandTotal > 0L) {
                 winningStakes.forEach { stake: Stake ->
-                    if (stake.amount > 0) {
+                    if (stake.amount > 0L) {
                         launch(Dispatchers.IO) {
                             val payout = calculatePayout(stake.amount, winningPool.amount, grandTotal, multiplier)
-                            userRepository.addBalance(stake.userId, payout.toLong())
+                            userRepository.addBalance(stake.userId, payout)
                             val updatedUser = userRepository.findById(stake.userId)
                             if (updatedUser != null) {
                                 balanceTransactionRepository.record(
                                     userId       = stake.userId,
-                                    amount       = payout.toLong(),
+                                    amount       = payout,
                                     balanceAfter = updatedUser.balance,
                                     type         = BalanceTransactionType.EVENT_PAYOUT,
                                     referenceId  = eventId

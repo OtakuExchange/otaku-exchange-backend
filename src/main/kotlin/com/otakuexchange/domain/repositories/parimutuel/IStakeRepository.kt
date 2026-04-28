@@ -22,6 +22,6 @@ interface IStakeRepository {
      * adds [amount] to it. Otherwise creates a new stake row.
      * Also increments the pool's total amount atomically.
      */
-    suspend fun addToStake(marketPoolId: Uuid, userId: Uuid, amount: Int): Stake
+    suspend fun addToStake(marketPoolId: Uuid, userId: Uuid, amount: Long): Stake
     suspend fun delete(id: Uuid): Boolean
 }

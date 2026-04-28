@@ -19,10 +19,8 @@ fun Application.configureRouting() {
     val authController     = get<IRouteController>(named("authController"))
     val adminController    = get<IRouteController>(named("adminController"))
     val topicController    = get<IRouteController>(named("topicController"))
-    val marketController   = get<IRouteController>(named("marketController"))
     val eventController    = get<IRouteController>(named("eventController"))
     val subtopicController = get<IRouteController>(named("subtopicController"))
-    val orderController    = get<IRouteController>(named("orderController"))
     val rankController     = get<IRouteController>(named("rankController"))
     val stakeController    = get<IRouteController>(named("stakeController"))
     val dailyStreakController = get<IRouteController>(named("dailyStreakController"))
@@ -42,9 +40,7 @@ fun Application.configureRouting() {
         authenticate("clerk_optional", optional = true) {
             authController.registerRoutes(this)
             topicController.registerRoutes(this)
-            marketController.registerRoutes(this)
             eventController.registerRoutes(this)
-            orderController.registerRoutes(this)
             subtopicController.registerRoutes(this)
             rankController.registerRoutes(this)
             stakeController.registerRoutes(this)      // public: pool list + preview
@@ -59,9 +55,7 @@ fun Application.configureRouting() {
         // Protected writes — valid Clerk JWT required
         authenticate("clerk") {
             topicController.registerProtectedRoutes(this)
-            marketController.registerProtectedRoutes(this)
             eventController.registerProtectedRoutes(this)
-            orderController.registerProtectedRoutes(this)
             subtopicController.registerProtectedRoutes(this)
             adminController.registerProtectedRoutes(this)
             stakeController.registerProtectedRoutes(this)  // protected: place stake + resolve

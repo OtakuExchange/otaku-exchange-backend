@@ -10,7 +10,7 @@ data class Stake(
     val id: Uuid = Uuid.random(),
     val userId: Uuid,
     val marketPoolId: Uuid,
-    val amount: Int = 0,   // total cents this user has staked into this pool
+    val amount: Long = 0L,   // total cents this user has staked into this pool
     val createdAt: Instant = Clock.System.now(),
     val updatedAt: Instant = Clock.System.now()
 )

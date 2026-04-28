@@ -17,7 +17,7 @@ class NeonFirstStakeBonusRepository : IFirstStakeBonusRepository {
             .singleOrNull() != null
     }
 
-    override suspend fun recordBonus(userId: Uuid, eventId: Uuid, bonus: Int): Unit = transaction {
+    override suspend fun recordBonus(userId: Uuid, eventId: Uuid, bonus: Long): Unit = transaction {
         FirstStakeBonusTable.insert {
             it[FirstStakeBonusTable.userId]  = userId
             it[FirstStakeBonusTable.eventId] = eventId
@@ -25,7 +25,7 @@ class NeonFirstStakeBonusRepository : IFirstStakeBonusRepository {
         }
     }
 
-    override suspend fun getBonusAmount(userId: Uuid, eventId: Uuid): Int? = transaction {
+    override suspend fun getBonusAmount(userId: Uuid, eventId: Uuid): Long? = transaction {
         FirstStakeBonusTable.selectAll()
             .where { (FirstStakeBonusTable.userId eq userId) and (FirstStakeBonusTable.eventId eq eventId) }
             .singleOrNull()

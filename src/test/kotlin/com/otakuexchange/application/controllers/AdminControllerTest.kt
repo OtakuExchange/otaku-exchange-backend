@@ -7,7 +7,6 @@ import com.otakuexchange.domain.market.MarketStatus
 import com.otakuexchange.domain.repositories.IMarketRepository
 import com.otakuexchange.domain.repositories.IPositionRepository
 import com.otakuexchange.domain.repositories.IUserRepository
-import com.otakuexchange.domain.services.MarketSeederService
 import com.otakuexchange.domain.user.AuthProvider
 import com.otakuexchange.domain.user.User
 import com.otakuexchange.testutil.createTestJwt
@@ -24,8 +23,6 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 class AdminControllerTest {
-
-    private val seederService = mockk<MarketSeederService>()
     private val marketRepo = mockk<IMarketRepository>()
     private val positionRepo = mockk<IPositionRepository>()
     private val userRepo = mockk<IUserRepository>()
@@ -39,7 +36,7 @@ class AdminControllerTest {
     private val normalUser = adminUser.copy(isAdmin = false)
     private val token = createTestJwt(clerkSub)
 
-    private fun controller() = AdminController(seederService, marketRepo, positionRepo, userRepo)
+    private fun controller() = AdminController(marketRepo, positionRepo, userRepo)
 
     @BeforeEach
     fun setUp() = clearAllMocks()
