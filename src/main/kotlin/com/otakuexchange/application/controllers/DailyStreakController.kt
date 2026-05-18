@@ -40,7 +40,8 @@ class DailyStreakController(
                 return@post call.respond(HttpStatusCode.BadRequest, e.message ?: "Claim failed")
             }
 
-            val totalReward = result.rewardCents + result.comebackBonusCents
+            // val totalReward = result.rewardCents + result.comebackBonusCents
+            val totalReward = result.rewardCents
             val updatedUser = userRepository.findById(user.id)
             if (updatedUser != null) {
                 balanceTransactionRepository.record(
