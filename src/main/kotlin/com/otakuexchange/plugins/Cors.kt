@@ -19,6 +19,7 @@ fun Application.configureCors() {
 
         // Allow your Vercel frontend
         allowHost("fillybexchange.vercel.app", schemes = listOf("https"))
+        allowHost("ccs-exchange.vercel.app", schemes = listOf("https"))
 
         // Allow local development
         allowHost("localhost:5173", schemes = listOf("http"))
