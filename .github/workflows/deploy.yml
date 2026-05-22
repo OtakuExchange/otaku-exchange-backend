@@ -1,0 +1,50 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t otaku-backend .
+
+      - name: Save image as tar
+        run: docker save otaku-backend | gzip > app.tar.gz
+
+      - name: Copy image to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          source: app.tar.gz
+          target: /home/${{ secrets.GCP_VM_USER }}/
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            docker load < app.tar.gz
+            docker stop otaku-backend || true
+            docker rm otaku-backend || true
+            docker run -d \
+              --name otaku-backend \
+              --restart always \
+              -p 8080:8080 \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+              -e CLERK_JWKS_URL="${{ secrets.CLERK_JWKS_URL }}" \
+              -e DB_MAX_POOL_SIZE=10 \
+              -e DB_MIN_IDLE=2 \
+              -e CLERK_SYNC_TTL_MS=300000 \
+              -e JAVA_OPTS="-Xms64m -Xmx256m" \
+              otaku-backend
+            rm app.tar.gz
