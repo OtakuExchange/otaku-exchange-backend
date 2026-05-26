@@ -28,8 +28,6 @@ import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.and
 import com.otakuexchange.domain.event.EventStatus
 
-private const val COMEBACK_RATE = 0.20  // 20% of the remaining gap after base reward
-
 class NeonDailyStreakRepository : IDailyStreakRepository {
 
     private fun rewardForStreak(streak: Int): Long = when {
@@ -76,16 +74,6 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
             ?.get(UserTable.balance) ?: 0L) + activeStakes
     }
 
-    /**
-     * 20% of the gap remaining after the base streak reward is applied.
-     * If the user is already at or above the leader, no bonus.
-     */
-    private fun comebackBonus(baseReward: Long, userTotal: Long, leaderTotal: Long): Long {
-        val gapAfterReward = (leaderTotal - userTotal - baseReward).coerceAtLeast(0L)
-        if (gapAfterReward == 0L) return 0L
-        return (gapAfterReward * COMEBACK_RATE).toLong()
-    }
-
     override suspend fun getStatus(userId: Uuid): StreakStatus = transaction {
         val today = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
         val yesterday = today.minus(1, DateTimeUnit.DAY)
@@ -99,12 +87,10 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
 
         if (row == null) {
             val base = rewardForStreak(0)
-            val bonus = comebackBonus(base, userTotal, leaderTotal)
             return@transaction StreakStatus(
                 streak = 0,
                 rewardCents = base,
-                canClaim = true,
-                comebackBonusCents = bonus
+                canClaim = true
             )
         }
 
@@ -113,13 +99,11 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
         val canClaim = lastClaim < today
         val currentStreak = if (lastClaim < yesterday) 0 else streak
         val base = rewardForStreak(currentStreak)
-        val bonus = comebackBonus(base, userTotal, leaderTotal)
 
         StreakStatus(
             streak = currentStreak,
             rewardCents = base,
-            canClaim = canClaim,
-            comebackBonusCents = bonus
+            canClaim = canClaim
         )
     }
 
@@ -159,19 +143,14 @@ class NeonDailyStreakRepository : IDailyStreakRepository {
                 it[DailyStreakTable.lastClaim] = today
             }
         }
-
-        val bonus = comebackBonus(reward, userTotal, leaderTotal)
-        val totalReward = reward + bonus
-
         UserTable.update({ UserTable.id eq userId }) {
-            it[UserTable.balance] = UserTable.balance + totalReward
+            it[UserTable.balance] = UserTable.balance + reward
         }
 
         StreakStatus(
             streak = newStreak,
             rewardCents = reward,
-            canClaim = false,
-            comebackBonusCents = bonus
+            canClaim = false
         )
     }
 }
