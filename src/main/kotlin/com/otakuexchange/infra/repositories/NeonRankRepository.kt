@@ -14,6 +14,8 @@ import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.inList
 
 class NeonRankRepository : IRankRepository {
     override suspend fun getWalletLeaderboard(limit: Int): List<WalletRankEntry> = transaction {
