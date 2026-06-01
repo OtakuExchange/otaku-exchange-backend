@@ -7,9 +7,7 @@ import com.otakuexchange.domain.repositories.ISubtopicRepository
 import com.otakuexchange.infra.tables.BookmarkTable
 import com.otakuexchange.infra.tables.EventSubtopicTable
 import com.otakuexchange.infra.tables.EventTable
-import com.otakuexchange.infra.tables.MarketTable
 import com.otakuexchange.infra.tables.SubtopicTable
-import com.otakuexchange.infra.tables.TradeHistoryTable
 import com.otakuexchange.infra.tables.UserEventViewTable
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -71,7 +69,6 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 )
             }
         val eventIds = events.map { it.id }
-        val volumeByEvent = calcVolumeByEvent(eventIds)
         val subtopicIdsByEventId = subtopicIdsByEventIds(eventIds)
 
         events.map { event ->
@@ -108,7 +105,6 @@ class NeonSubtopicRepository : ISubtopicRepository {
                 logoPath       = event.logoPath,
                 pandaScoreId   = event.pandaScoreId,
                 createdAt      = event.createdAt,
-                tradeVolume    = volumeByEvent[event.id] ?: 0L,
                 bookmarked     = bookmarked,
                 multiplier     = event.multiplier,
                 isNew          = isNew,
@@ -138,28 +134,6 @@ class NeonSubtopicRepository : ISubtopicRepository {
         name      = this[SubtopicTable.name],
         createdAt = this[SubtopicTable.createdAt]
     )
-
-    private fun calcVolumeByEvent(eventIds: List<Uuid>): Map<Uuid, Long> {
-        if (eventIds.isEmpty()) return emptyMap()
-        val marketsByEvent = MarketTable.selectAll()
-            .where { MarketTable.eventId inList eventIds }
-            .groupBy({ it[MarketTable.eventId] }, { it[MarketTable.id] })
-
-        val allMarketIds = marketsByEvent.values.flatten()
-        if (allMarketIds.isEmpty()) return emptyMap()
-
-        val tradesByMarket = TradeHistoryTable.selectAll()
-            .where { TradeHistoryTable.marketId inList allMarketIds }
-            .groupBy { it[TradeHistoryTable.marketId] }
-
-        return marketsByEvent.mapValues { (_, marketIds) ->
-            marketIds.sumOf { marketId ->
-                tradesByMarket[marketId]?.sumOf {
-                    it[TradeHistoryTable.escrowPerContract].toLong() * it[TradeHistoryTable.quantity].toLong()
-                } ?: 0L
-            }
-        }
-    }
 
     private fun subtopicIdsByEventIds(eventIds: List<Uuid>): Map<Uuid, List<Uuid>> {
         if (eventIds.isEmpty()) return emptyMap()

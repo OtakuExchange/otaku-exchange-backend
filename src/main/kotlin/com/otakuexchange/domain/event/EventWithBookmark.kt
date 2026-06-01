@@ -19,7 +19,6 @@ data class EventWithBookmark(
     val logoPath: String? = null,
     val pandaScoreId: Long? = null,
     val createdAt: Instant = Clock.System.now(),
-    val tradeVolume: Long = 0L,
     val bookmarked: Boolean,
     val alias: String? = null,
     val multiplier: Int = 1,
