@@ -1,3 +1,4 @@
+package com.otakuexchange.infra.repositories.parimutuel
 
 import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.parimutuel.PortfolioPool
