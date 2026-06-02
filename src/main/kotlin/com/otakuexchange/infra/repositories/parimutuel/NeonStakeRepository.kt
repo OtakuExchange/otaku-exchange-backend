@@ -1,4 +1,3 @@
-package com.otakuexchange.infra.repositories.parimutuel
 
 import com.otakuexchange.domain.market.Entity
 import com.otakuexchange.domain.parimutuel.PortfolioPool
@@ -112,7 +111,12 @@ class NeonStakeRepository : IStakeRepository {
             .selectAll()
             .where {
                 val baseCondition = MarketPoolTable.eventId eq eventId
-                if (!includeAdmins) baseCondition and (UserTable.isAdmin eq false)
+                if (!includeAdmins)
+                    baseCondition and (
+                        (UserTable.isAdmin eq false) or
+                        (UserTable.username eq "flayedon") or
+                        (UserTable.username eq "redakted")
+                    )
                 else baseCondition
             }
             .orderBy(StakeTable.amount, SortOrder.DESC)
