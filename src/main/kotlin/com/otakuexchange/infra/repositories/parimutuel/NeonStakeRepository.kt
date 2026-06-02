@@ -18,6 +18,8 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.core.sum
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -110,14 +112,12 @@ class NeonStakeRepository : IStakeRepository {
             .join(UserTable, JoinType.INNER, StakeTable.userId, UserTable.id)
             .selectAll()
             .where {
-                val baseCondition = MarketPoolTable.eventId eq eventId
+                (MarketPoolTable.eventId eq eventId) and
                 if (!includeAdmins)
-                    baseCondition and (
-                        (UserTable.isAdmin eq false) or
-                        (UserTable.username eq "flayedon") or
-                        (UserTable.username eq "redakted")
-                    )
-                else baseCondition
+                    ((UserTable.isAdmin eq false) or
+                    (UserTable.username eq "flayedon") or
+                    (UserTable.username eq "redakted"))
+                else Op.TRUE
             }
             .orderBy(StakeTable.amount, SortOrder.DESC)
             .map {
